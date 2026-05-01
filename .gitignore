@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment files — NEVER commit secrets
+.env
+.env.local
+.env.production
+backend/.env
+
+# Terraform state — managed in S3, never commit locally
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/environments/**/*.tfstate
+terraform/environments/**/*.tfstate.backup
+*.tfplan
+
+# AWS credentials — NEVER commit
+.aws/
+aws-credentials.json
+*.pem
+*.key
+
+# Build artifacts
+dist/
+build/
+*.zip
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Docker
+.dockerignore

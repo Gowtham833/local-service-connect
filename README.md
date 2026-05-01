@@ -1,0 +1,223 @@
+# ServiConnect — Complete Project Setup Guide
+
+Smart Local On-Demand Services Platform  
+**Right Worker. Right Time. Right at Your Door.**
+
+---
+
+## 📁 Project Structure
+
+```
+serviconnect/
+├── backend/                      ← Node.js + Express API Server
+│   ├── server.js                 ← Entry point — starts the server
+│   ├── package.json
+│   ├── .env.example              ← Copy to .env and fill values
+│   ├── middleware/
+│   │   └── auth.js               ← JWT protect + authorize helpers
+│   ├── models/
+│   │   └── store.js              ← In-memory data store (seed data included)
+│   └── routes/
+│       ├── auth.js               ← POST /api/auth/customer/* and /worker/*
+│       ├── customer.js           ← GET/POST /api/customer/*
+│       └── worker.js             ← GET/PATCH /api/worker/*
+│
+└── frontend/
+    └── public/                   ← Served as static files by Express
+        ├── index.html            ← Landing page (home)
+        ├── css/
+        │   └── shared.css        ← All dashboard styles
+        ├── js/
+        │   └── api.js            ← Auth helpers + API client (used by all pages)
+        └── pages/
+            ├── customer-login.html     ← Customer login + signup
+            ├── worker-login.html       ← Worker login + register
+            ├── customer-dashboard.html ← Customer dashboard (protected)
+            └── worker-dashboard.html   ← Worker dashboard (protected)
+```
+
+---
+
+## 🚀 How to Run (Step by Step)
+
+### Step 1 — Install Node.js
+Download from https://nodejs.org (v18 or newer recommended)
+
+Verify installation:
+```bash
+node -v    # should show v18+
+npm -v     # should show 9+
+```
+
+### Step 2 — Set up the Backend
+
+```bash
+# Navigate to backend folder
+cd serviconnect/backend
+
+# Install dependencies
+npm install
+
+# Create your .env file
+cp .env.example .env
+
+# (Optional) Edit .env to change port or JWT secret
+```
+
+### Step 3 — Start the Server
+
+```bash
+# From inside serviconnect/backend/
+node server.js
+
+# OR with auto-restart on file changes:
+npm run dev
+```
+
+You should see:
+```
+╔══════════════════════════════════════════╗
+║      ServiConnect API Server             ║
+║      Running on http://localhost:5000    ║
+╚══════════════════════════════════════════╝
+```
+
+### Step 4 — Open the App
+
+Open your browser and go to:
+```
+http://localhost:5000
+```
+
+That's it! The Express server serves both the API and all frontend files.
+
+---
+
+## 🔗 URL Map
+
+| URL | Page |
+|-----|------|
+| `http://localhost:5000/` | Landing page (home) |
+| `http://localhost:5000/pages/customer-login.html` | Customer login/signup |
+| `http://localhost:5000/pages/worker-login.html` | Worker login/register |
+| `http://localhost:5000/pages/customer-dashboard.html` | Customer dashboard (auth required) |
+| `http://localhost:5000/pages/worker-dashboard.html` | Worker dashboard (auth required) |
+| `http://localhost:5000/api/health` | API health check |
+
+---
+
+## 👤 Demo Accounts (Ready to Use)
+
+### Customer
+- **Phone:** `9876543210`
+- **Password:** `password123`
+
+### Worker
+- **Phone:** `9123456789`
+- **Password:** `password123`
+
+---
+
+## 🔌 API Reference
+
+### Auth Routes (public)
+```
+POST /api/auth/customer/register   — Create customer account
+POST /api/auth/customer/login      — Customer login → returns JWT token
+POST /api/auth/worker/register     — Create worker account
+POST /api/auth/worker/login        — Worker login → returns JWT token
+```
+
+### Customer Routes (requires Bearer token, role: customer)
+```
+GET  /api/customer/me              — Profile + stats + recent bookings
+GET  /api/customer/workers         — Browse available workers (?service=Plumbing)
+GET  /api/customer/bookings        — All bookings
+POST /api/customer/bookings        — Post new service request
+PATCH /api/customer/bookings/:id/rate — Rate a completed booking
+```
+
+### Worker Routes (requires Bearer token, role: worker)
+```
+GET   /api/worker/me               — Profile + stats + recent jobs
+PATCH /api/worker/availability     — Toggle online/offline { isAvailable: true/false }
+GET   /api/worker/open-jobs        — Available jobs matching worker's skills
+PATCH /api/worker/jobs/:id/accept  — Accept an open job
+PATCH /api/worker/jobs/:id/complete — Mark job done + set price { price: 850 }
+```
+
+---
+
+## 🗃️ Connect a Real Database (MongoDB)
+
+The app currently uses an in-memory store (data resets on server restart).  
+To use MongoDB:
+
+1. Install mongoose: `npm install mongoose`
+2. Add `MONGO_URI` to your `.env`
+3. Create `backend/config/db.js`:
+```js
+const mongoose = require('mongoose');
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error(err));
+```
+4. Call `require('./config/db')` at top of `server.js`
+5. Convert `models/store.js` to Mongoose schemas
+
+---
+
+## 🔧 Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Node.js + Express |
+| Auth | JWT (jsonwebtoken) + bcryptjs |
+| Database | In-memory (dev) → MongoDB (production) |
+| Frontend | Vanilla HTML + CSS + JavaScript |
+| Fonts | Google Fonts — Syne + DM Sans |
+| Deployment | Any Node.js host: Railway, Render, Vercel, VPS |
+
+---
+
+## 🌐 Deploy to Production
+
+### Option A — Railway (easiest)
+1. Push code to GitHub
+2. Go to railway.app → New Project → Deploy from GitHub
+3. Set root directory to `backend/`
+4. Add environment variables from `.env`
+5. Done — Railway gives you a public URL
+
+### Option B — Render
+1. Create a Web Service on render.com
+2. Build command: `npm install`
+3. Start command: `node server.js`
+4. Add env vars in dashboard
+
+### Option C — VPS (DigitalOcean, AWS EC2)
+```bash
+git clone <your-repo>
+cd serviconnect/backend
+npm install
+# Install PM2 for process management
+npm install -g pm2
+pm2 start server.js --name serviconnect
+pm2 save
+```
+
+---
+
+## 📱 Future Enhancements
+
+- [ ] Google Maps live tracking integration (add GOOGLE_MAPS_API_KEY to .env)
+- [ ] Push notifications (Firebase FCM)
+- [ ] In-app payment (Razorpay / Stripe)
+- [ ] Telugu language AI support (Sarvam AI API)
+- [ ] AI smart worker matching (based on rating + distance)
+- [ ] Mobile app (React Native)
+- [ ] Admin panel for managing workers and disputes
+
+---
+
+ServiConnect © 2025 | Smart Local On-Demand Services Platform
