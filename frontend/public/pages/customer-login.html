@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Login — ServiConnect</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --orange: #FF5C1A; --orange-light: #FF8A5B;
+    --navy: #0D1B2A; --navy-mid: #162336; --navy-soft: #1E2F45;
+    --text-primary: #FFFFFF; --text-dim: rgba(255,255,255,0.5);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--text-primary); min-height: 100vh; display: flex; }
+  .left-panel {
+    width: 46%; background: linear-gradient(160deg, #1a0800, #2d0f00 40%, #0D1B2A);
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 48px 56px; position: relative; overflow: hidden;
+  }
+  .left-panel::before { content:''; position:absolute; top:-100px; right:-100px; width:500px; height:500px; background:radial-gradient(circle, rgba(255,92,26,0.2), transparent 70%); pointer-events:none; }
+  .back-link { display:inline-flex; align-items:center; gap:8px; color:rgba(255,255,255,0.5); text-decoration:none; font-size:0.85rem; transition:color 0.2s; position:relative; z-index:1; }
+  .back-link:hover { color:var(--orange); }
+  .panel-content { position:relative; z-index:1; }
+  .panel-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(255,92,26,0.15); border:1px solid rgba(255,92,26,0.3); color:var(--orange-light); padding:6px 16px; border-radius:50px; font-size:0.8rem; font-weight:500; letter-spacing:1px; text-transform:uppercase; margin-bottom:28px; }
+  .panel-title { font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; letter-spacing:-1.5px; line-height:1.05; margin-bottom:20px; }
+  .panel-title .accent { color:var(--orange); }
+  .panel-sub { color:rgba(255,255,255,0.55); font-size:1rem; line-height:1.7; max-width:360px; }
+  .features { margin-top:48px; display:flex; flex-direction:column; gap:20px; }
+  .feature { display:flex; align-items:flex-start; gap:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:20px 24px; }
+  .feature:hover { border-color:rgba(255,92,26,0.3); transition:border-color 0.2s; }
+  .feature-icon { width:44px; height:44px; border-radius:12px; background:rgba(255,92,26,0.12); display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
+  .feature-text h4 { font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:700; margin-bottom:4px; }
+  .feature-text p { font-size:0.82rem; color:var(--text-dim); line-height:1.5; }
+  .panel-footer { position:relative; z-index:1; }
+  .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.3rem; }
+  .logo span { color:var(--orange); }
+  .tagline { font-size:0.78rem; color:var(--text-dim); margin-top:4px; }
+  .right-panel { flex:1; display:flex; align-items:center; justify-content:center; padding:60px 80px; }
+  .form-box { width:100%; max-width:400px; }
+  .form-heading { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; letter-spacing:-0.5px; margin-bottom:8px; }
+  .form-sub { color:var(--text-dim); font-size:0.9rem; margin-bottom:40px; line-height:1.6; }
+  .form-sub a { color:var(--orange); text-decoration:none; cursor:pointer; }
+  .tabs { display:flex; background:var(--navy-soft); border-radius:14px; padding:4px; margin-bottom:36px; }
+  .tab { flex:1; padding:10px; border-radius:11px; text-align:center; font-size:0.88rem; font-weight:500; cursor:pointer; transition:all 0.25s; color:var(--text-dim); }
+  .tab.active { background:var(--orange); color:#fff; font-weight:600; }
+  .form-group { margin-bottom:20px; }
+  label { display:block; font-size:0.82rem; font-weight:500; color:rgba(255,255,255,0.7); margin-bottom:8px; }
+  input { width:100%; background:var(--navy-soft); border:1.5px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 18px; font-family:'DM Sans',sans-serif; font-size:0.95rem; color:#fff; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
+  input::placeholder { color:rgba(255,255,255,0.25); }
+  input:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,92,26,0.12); }
+  .input-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .forgot { display:block; text-align:right; font-size:0.82rem; color:var(--text-dim); text-decoration:none; margin-top:-12px; margin-bottom:24px; }
+  .forgot:hover { color:var(--orange); }
+  .submit-btn { width:100%; background:var(--orange); color:#fff; border:none; border-radius:14px; padding:16px; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.25s; }
+  .submit-btn:hover:not(:disabled) { background:var(--orange-light); transform:translateY(-2px); box-shadow:0 8px 30px rgba(255,92,26,0.35); }
+  .submit-btn:disabled { opacity:0.6; cursor:not-allowed; }
+  .error-msg { background:rgba(244,67,54,0.1); border:1px solid rgba(244,67,54,0.3); color:#F44336; padding:12px 16px; border-radius:10px; font-size:0.85rem; margin-bottom:20px; display:none; }
+  .switch-link { text-align:center; margin-top:28px; font-size:0.85rem; color:var(--text-dim); }
+  .switch-link a { color:var(--orange); text-decoration:none; font-weight:600; }
+  #signup-form { display:none; }
+  .toast { position:fixed; bottom:28px; right:28px; padding:14px 22px; border-radius:12px; font-size:0.88rem; background:var(--navy-soft); border:1px solid rgba(255,255,255,0.1); color:#fff; z-index:9999; opacity:0; transform:translateY(16px); transition:all 0.35s ease; }
+  .toast.show { opacity:1; transform:translateY(0); }
+  .toast-error { border-color:#F44336; }
+</style>
+</head>
+<body>
+
+<div class="left-panel">
+  <a href="/index.html" class="back-link">← Back to home</a>
+  <div class="panel-content">
+    <div class="panel-badge">🏠 Customer Portal</div>
+    <h2 class="panel-title">Find Service<br>in <span class="accent">Minutes,</span><br>Not Hours.</h2>
+    <p class="panel-sub">Post a request, watch your worker live on map, and get back to your life.</p>
+    <div class="features">
+      <div class="feature"><div class="feature-icon">📍</div><div class="feature-text"><h4>Live Map Tracking</h4><p>See verified workers nearby and track them in real time.</p></div></div>
+      <div class="feature"><div class="feature-icon">🤖</div><div class="feature-text"><h4>AI Smart Matching</h4><p>Top 3 workers picked by proximity, rating, and availability.</p></div></div>
+      <div class="feature"><div class="feature-icon">⭐</div><div class="feature-text"><h4>Verified Reviews</h4><p>AI-powered fake review detection keeps ratings honest.</p></div></div>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <div class="logo">Servi<span>Connect</span></div>
+    <div class="tagline">Right Worker. Right Time. Right at Your Door.</div>
+  </div>
+</div>
+
+<div class="right-panel">
+  <div class="form-box">
+    <h2 class="form-heading">Customer Login</h2>
+    <p class="form-sub">New here? <a onclick="showTab('signup')">Create a free account</a></p>
+    <div class="tabs">
+      <div class="tab active" id="tabLogin" onclick="showTab('login')">Login</div>
+      <div class="tab" id="tabSignup" onclick="showTab('signup')">Sign Up</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="login-form">
+      <div id="loginError" class="error-msg"></div>
+      <div class="form-group"><label>Phone Number</label><input type="tel" id="loginPhone" placeholder="+91 98765 43210 (demo: 9876543210)"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPass" placeholder="password123"></div>
+      <a href="#" class="forgot">Forgot password?</a>
+      <button class="submit-btn" id="loginBtn" onclick="doLogin()">Login as Customer →</button>
+      <p style="font-size:0.78rem;color:var(--text-dim);text-align:center;margin-top:14px">Demo: phone <strong style="color:#fff">9876543210</strong> / pass <strong style="color:#fff">password123</strong></p>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="signup-form">
+      <div id="signupError" class="error-msg"></div>
+      <div class="input-row">
+        <div class="form-group"><label>First Name</label><input type="text" id="regFirst" placeholder="Ravi"></div>
+        <div class="form-group"><label>Last Name</label><input type="text" id="regLast" placeholder="Kumar"></div>
+      </div>
+      <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="ravi@example.com"></div>
+      <div class="form-group"><label>Phone Number</label><input type="tel" id="regPhone" placeholder="+91 98765 43210"></div>
+      <div class="form-group"><label>City</label><input type="text" id="regCity" placeholder="Hyderabad, Chennai…"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="regPass" placeholder="Create a strong password"></div>
+      <button class="submit-btn" id="signupBtn" onclick="doSignup()">Create Account →</button>
+    </div>
+
+    <div class="switch-link">Are you a worker? <a href="/pages/worker-login.html">Worker Login →</a></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/js/config.js"></script>
+<script src="/js/api.js"></script>
+<script>
+// If already logged in, redirect
+if (Auth.isLoggedIn()) Auth.redirectToDashboard();
+
+function showTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+  document.getElementById('login-form').style.display  = tab === 'login'  ? 'block' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? 'block' : 'none';
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function doLogin() {
+  const phone = document.getElementById('loginPhone').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  document.getElementById('loginError').style.display = 'none';
+  if (!phone || !pass) { showError('loginError', 'Please enter phone and password.'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+
+  const { ok, data } = await AuthAPI.customerLogin(phone, pass);
+  btn.disabled = false; btn.textContent = 'Login as Customer →';
+
+  if (ok) {
+    Auth.save(data.token, data.role, data.user);
+    showToast('✅ Welcome back, ' + data.user.firstName + '!');
+    setTimeout(() => window.location.href = '/pages/customer-dashboard.html', 800);
+  } else {
+    showError('loginError', data.message || 'Login failed. Check credentials.');
+  }
+}
+
+async function doSignup() {
+  const payload = {
+    firstName: document.getElementById('regFirst').value.trim(),
+    lastName:  document.getElementById('regLast').value.trim(),
+    email:     document.getElementById('regEmail').value.trim(),
+    phone:     document.getElementById('regPhone').value.trim(),
+    city:      document.getElementById('regCity').value.trim(),
+    password:  document.getElementById('regPass').value,
+  };
+  document.getElementById('signupError').style.display = 'none';
+  if (!payload.firstName || !payload.phone || !payload.password) {
+    showError('signupError', 'Please fill all required fields.'); return;
+  }
+
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+
+  const { ok, data } = await AuthAPI.customerRegister(payload);
+  btn.disabled = false; btn.textContent = 'Create Account →';
+
+  if (ok) {
+    Auth.save(data.token, data.role, data.user);
+    showToast('🎉 Account created! Welcome to ServiConnect!');
+    setTimeout(() => window.location.href = '/pages/customer-dashboard.html', 800);
+  } else {
+    showError('signupError', data.message || 'Registration failed.');
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('login-form').style.display !== 'none') doLogin();
+    else doSignup();
+  }
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
