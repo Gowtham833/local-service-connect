@@ -1,0 +1,30 @@
+const { DataTypes } = require('sequelize');
+
+module.exports = (sequelize) => {
+  const Worker = sequelize.define('Worker', {
+    id:           { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    firstName:    { type: DataTypes.STRING(100), allowNull: false },
+    lastName:     { type: DataTypes.STRING(100), allowNull: true },
+    email:        { type: DataTypes.STRING(255), allowNull: true, unique: true },
+    phone:        { type: DataTypes.STRING(20),  allowNull: false, unique: true },
+    city:         { type: DataTypes.STRING(100), allowNull: true },
+    skills:       { type: DataTypes.ARRAY(DataTypes.STRING), defaultValue: [] },
+    experience:   { type: DataTypes.STRING(500), allowNull: true },
+    passwordHash: { type: DataTypes.STRING,      allowNull: false },
+    avatar:       { type: DataTypes.STRING(10),  defaultValue: '👷' },
+    isAvailable:  { type: DataTypes.BOOLEAN,     defaultValue: false },
+    isVerified:   { type: DataTypes.BOOLEAN,     defaultValue: false },
+    rating:       { type: DataTypes.FLOAT,       defaultValue: 0 },
+    lat:          { type: DataTypes.FLOAT,       allowNull: true },
+    lng:          { type: DataTypes.FLOAT,       allowNull: true },
+    cognitoSub:   { type: DataTypes.STRING,      allowNull: true },
+    isActive:     { type: DataTypes.BOOLEAN,     defaultValue: true },
+  }, { tableName: 'workers', underscored: true });
+
+  Worker.associate = (models) => {
+    Worker.hasMany(models.Booking, { foreignKey: 'workerId', as: 'jobs'    });
+    Worker.hasMany(models.Review,  { foreignKey: 'workerId', as: 'reviews' });
+  };
+
+  return Worker;
+};
