@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Worker Dashboard — ServiConnect</title>
+<link rel="stylesheet" href="/css/shared.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+<div class="dash-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">Servi<span>Connect</span></div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">👷</div>
+      <div class="user-name" id="sidebarName">Loading…</div>
+      <div class="user-role">Worker Account</div>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="showPage('overview')"><span class="nav-icon">📊</span> Overview</div>
+      <div class="nav-item" onclick="showPage('jobs')"><span class="nav-icon">🔔</span> Open Jobs</div>
+      <div class="nav-item" onclick="showPage('history')"><span class="nav-icon">📋</span> Job History</div>
+      <div class="nav-item" onclick="showPage('earnings')"><span class="nav-icon">💰</span> Earnings</div>
+      <div class="nav-item" onclick="showPage('profile')"><span class="nav-icon">👤</span> My Profile</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="logout-btn" onclick="Auth.logout()">🚪 Logout</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- ── OVERVIEW ─────────────────────────────────── -->
+    <div id="page-overview">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-subtitle" id="greetSub">Welcome back!</div>
+        </div>
+        <!-- Availability Toggle -->
+        <div style="display:flex;align-items:center;gap:14px">
+          <div id="availBadge" class="avail-badge avail-off"><div class="avail-dot"></div> <span id="availLabel">Offline</span></div>
+          <div class="toggle-wrap">
+            <button class="toggle-switch" id="availToggle" onclick="toggleAvailability()"></button>
+            <span style="font-size:0.85rem;color:var(--text-dim)">Go Online</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon">🔧</div><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total Jobs Done</div></div>
+        <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value" id="statMonth">—</div><div class="stat-label">Jobs This Month</div></div>
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="statEarnings">—</div><div class="stat-label">Total Earnings</div></div>
+        <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-value" id="statRating">—</div><div class="stat-label">Average Rating</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Recent Jobs <button class="btn btn-ghost btn-sm" onclick="showPage('history')">View All</button></div>
+        <div id="recentJobs"><div class="loader"><div class="spinner"></div></div></div>
+      </div>
+
+      <div class="card" id="activeJobCard" style="display:none;border-color:var(--teal)">
+        <div class="card-title" style="color:var(--teal)">🟢 Active Job in Progress</div>
+        <div id="activeJobDetail"></div>
+        <div id="jobMap" style="height:250px;border-radius:12px;margin-top:20px;border:1px solid var(--navy-mid)"></div>
+      </div>
+    </div>
+
+    <!-- ── OPEN JOBS ─────────────────────────────────── -->
+    <div id="page-jobs" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Open Job Requests</div><div class="page-subtitle">Requests matching your skills near you</div></div>
+        <button class="btn btn-ghost" onclick="loadOpenJobs()">🔄 Refresh</button>
+      </div>
+      <div id="openJobsList"><div class="loader"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- ── JOB HISTORY ───────────────────────────────── -->
+    <div id="page-history" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Job History</div><div class="page-subtitle">All your completed and active jobs</div></div>
+      </div>
+      <div class="card">
+        <div id="jobHistoryTable"><div class="loader"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── EARNINGS ──────────────────────────────────── -->
+    <div id="page-earnings" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Earnings Overview</div></div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);max-width:600px">
+        <div class="stat-card"><div class="stat-icon">🗓️</div><div class="stat-value" id="earnMonth">—</div><div class="stat-label">This Month</div></div>
+        <div class="stat-card"><div class="stat-icon">💼</div><div class="stat-value" id="earnTotal">—</div><div class="stat-label">All Time</div></div>
+        <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value" id="earnJobsMonth">—</div><div class="stat-label">Jobs This Month</div></div>
+        <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-value" id="earnAvg">—</div><div class="stat-label">Avg Per Job</div></div>
+      </div>
+      <div class="card" style="margin-top:24px">
+        <div class="card-title">Earnings Breakdown</div>
+        <div id="earningsTable"></div>
+      </div>
+    </div>
+
+    <!-- ── PROFILE ───────────────────────────────────── -->
+    <div id="page-profile" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">My Profile</div></div>
+      </div>
+      <div class="card" style="max-width:520px">
+        <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:2rem;border:2px solid var(--teal)">👷</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800" id="profileName">—</div>
+            <div style="font-size:0.85rem;color:var(--text-dim)" id="profilePhone">—</div>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Skills</label><div id="profileSkills" style="display:flex;gap:8px;flex-wrap:wrap;padding-top:4px"></div></div>
+        <div class="form-group"><label class="form-label">City</label><div id="profileCity" style="padding:12px 0;color:var(--text-soft)">—</div></div>
+        <div class="form-group"><label class="form-label">Experience</label><div id="profileExp" style="padding:12px 0;color:var(--text-soft)">—</div></div>
+        <div class="form-group"><label class="form-label">Member Since</label><div id="profileSince" style="padding:12px 0;color:var(--text-soft)">—</div></div>
+        <div class="form-group">
+          <label class="form-label">Verification Status</label>
+          <div id="profileVerified"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- COMPLETE JOB MODAL -->
+<div class="modal-overlay" id="completeModal">
+  <div class="modal">
+    <div class="modal-title">✅ Mark Job as Complete</div>
+    <input type="hidden" id="completeJobId">
+    <div class="form-group">
+      <label class="form-label">Final Price (₹)</label>
+      <input class="form-input" type="number" id="completePrice" placeholder="850">
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-bottom:20px">Enter the agreed amount with the customer.</p>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-teal" style="flex:1;justify-content:center" onclick="completeJob()">Mark Complete</button>
+      <button class="btn btn-ghost" onclick="closeModal('completeModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/ai-chat.js"></script>
+<script>
+if (!Auth.requireAuth('worker')) throw new Error('Not authorized');
+
+let workerData = null;
+let jobMap = null;
+let jobMarker = null;
+
+const pages = ['overview', 'jobs', 'history', 'earnings', 'profile'];
+function showPage(name) {
+  pages.forEach(p => document.getElementById(`page-${p}`).style.display = p === name ? 'block' : 'none');
+  if (name === 'jobs')     loadOpenJobs();
+  if (name === 'history')  renderHistory();
+  if (name === 'earnings') renderEarnings();
+  if (name === 'profile')  renderProfile();
+}
+
+async function loadDashboard() {
+  const { ok, data } = await WorkerAPI.getMe();
+  if (!ok) { showToast('Session expired.', 'error'); Auth.logout(); return; }
+
+  workerData = data.data;
+  const s = workerData.stats;
+
+  document.getElementById('sidebarName').textContent = `${workerData.firstName} ${workerData.lastName}`;
+  document.getElementById('greetSub').textContent = `Hello, ${workerData.firstName}! You have ${s.activeJobs} active job(s).`;
+
+  // Stats
+  document.getElementById('statTotal').textContent = s.totalJobs;
+  document.getElementById('statMonth').textContent = s.jobsThisMonth;
+  document.getElementById('statEarnings').textContent = formatCurrency(s.totalEarnings);
+  document.getElementById('statRating').textContent = s.avgRating ? `${s.avgRating} ★` : 'New';
+
+  // Availability
+  updateAvailUI(workerData.isAvailable);
+
+  renderRecentJobs(workerData.recentJobs);
+  renderActiveJob(workerData.recentJobs);
+}
+
+function updateAvailUI(isAvail) {
+  const toggle = document.getElementById('availToggle');
+  const badge  = document.getElementById('availBadge');
+  const label  = document.getElementById('availLabel');
+  toggle.classList.toggle('on', isAvail);
+  badge.className = `avail-badge ${isAvail ? 'avail-on' : 'avail-off'}`;
+  label.textContent = isAvail ? 'Online – Visible on Map' : 'Offline';
+}
+
+async function toggleAvailability() {
+  const current = workerData?.isAvailable || false;
+  const { ok, data } = await WorkerAPI.toggleAvailability(!current);
+  if (ok) {
+    workerData.isAvailable = data.isAvailable;
+    updateAvailUI(data.isAvailable);
+    
+    if (data.isAvailable) {
+      startLocationTracking();
+      showToast('🟢 You are now ONLINE and being tracked on the map!');
+    } else {
+      stopLocationTracking();
+      showToast('⚫ You are now offline.');
+    }
+  }
+}
+
+let watchId = null;
+function startLocationTracking() {
+  if (!navigator.geolocation) return console.error('Geolocation not supported');
+  
+  // Update once immediately
+  navigator.geolocation.getCurrentPosition(pos => {
+    WorkerAPI.updateLocation(pos.coords.latitude, pos.coords.longitude);
+  });
+
+  // Then watch
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      console.log('Location update:', pos.coords.latitude, pos.coords.longitude);
+      WorkerAPI.updateLocation(pos.coords.latitude, pos.coords.longitude);
+    },
+    err => console.error('Tracking error:', err),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+function stopLocationTracking() {
+  if (watchId) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+}
+
+function renderRecentJobs(jobs) {
+  const el = document.getElementById('recentJobs');
+  const recent = (jobs || []).slice(0, 6);
+  if (!recent.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No jobs yet. Go online to start receiving requests!</div></div>'; return; }
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Service</th><th>Customer</th><th>Date</th><th>Price</th><th>Status</th><th>Rating</th></tr></thead>
+      <tbody>
+        ${recent.map(j => `
+          <tr>
+            <td>${j.service}</td>
+            <td>${j.customerName}</td>
+            <td>${formatDate(j.createdAt)}</td>
+            <td>${j.price ? formatCurrency(j.price) : '—'}</td>
+            <td>${statusBadge(j.status)}</td>
+            <td>${j.rating ? `⭐ ${j.rating}` : '—'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderActiveJob(jobs) {
+  const active = (jobs || []).filter(j => j.status === 'active');
+  const card = document.getElementById('activeJobCard');
+  if (!active.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const j = active[0];
+  document.getElementById('activeJobDetail').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:4px">SERVICE</div><div style="font-weight:600">${j.service}</div></div>
+      <div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:4px">CUSTOMER</div><div style="font-weight:600">${j.customerName}</div></div>
+      <div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:4px">ADDRESS</div><div style="font-weight:600">${j.address || '—'}</div></div>
+      <div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:4px">PHONE</div><div style="font-weight:600">${j.customerPhone || '—'}</div></div>
+    </div>
+    <button class="btn btn-teal" style="margin-top:20px" onclick="openComplete('${j.id}')">✅ Mark as Done</button>`;
+  
+  if (j.lat && j.lng) {
+    setTimeout(() => {
+      if (!jobMap) {
+        jobMap = L.map('jobMap').setView([j.lat, j.lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(jobMap);
+      } else {
+        jobMap.setView([j.lat, j.lng], 14);
+      }
+      if (jobMarker) jobMap.removeLayer(jobMarker);
+      jobMarker = L.marker([j.lat, j.lng])
+        .bindPopup(`<b>Job Site: ${j.customerName}</b><br>${j.address}`)
+        .addTo(jobMap)
+        .openPopup();
+    }, 100);
+  }
+}
+
+async function loadOpenJobs() {
+  const el = document.getElementById('openJobsList');
+  el.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  const { ok, data } = await WorkerAPI.getOpenJobs();
+  if (!ok || !data.data.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">No open job requests right now. Check back soon!</div></div>';
+    return;
+  }
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:16px">
+    ${data.data.map(j => `
+      <div class="card" style="margin:0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;margin-bottom:4px">🔧 ${j.service}</div>
+          <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:6px">${j.description || 'No description provided'}</div>
+          <div style="font-size:0.82rem;color:var(--text-soft)">📍 ${j.address || '—'} &nbsp;·&nbsp; 👤 ${j.customerName}</div>
+          <div style="font-size:0.78rem;color:var(--text-dim);margin-top:4px">${formatDate(j.createdAt)}</div>
+        </div>
+        <button class="btn btn-teal" onclick="acceptJob('${j.id}')">Accept Job →</button>
+      </div>`).join('')}
+  </div>`;
+}
+
+async function acceptJob(id) {
+  const { ok, data } = await WorkerAPI.acceptJob(id);
+  if (ok) {
+    showToast('✅ Job accepted! Navigate to the customer.');
+    loadDashboard();
+    showPage('overview');
+  } else {
+    showToast(data.message || 'Could not accept job.', 'error');
+  }
+}
+
+function openComplete(id) {
+  document.getElementById('completeJobId').value = id;
+  document.getElementById('completeModal').classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function completeJob() {
+  const id    = document.getElementById('completeJobId').value;
+  const price = parseFloat(document.getElementById('completePrice').value) || 0;
+  const { ok, data } = await WorkerAPI.completeJob(id, price);
+  if (ok) {
+    showToast(`✅ Job marked complete! Earned ${formatCurrency(price)}`);
+    closeModal('completeModal');
+    loadDashboard();
+  } else {
+    showToast(data.message || 'Could not complete job.', 'error');
+  }
+}
+
+function renderHistory() {
+  const jobs = workerData?.recentJobs || [];
+  const el = document.getElementById('jobHistoryTable');
+  if (!jobs.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No job history yet.</div></div>'; return; }
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Service</th><th>Customer</th><th>Date</th><th>Price</th><th>Status</th><th>Rating</th></tr></thead>
+      <tbody>
+        ${jobs.map(j => `<tr>
+          <td>${j.service}</td><td>${j.customerName}</td>
+          <td>${formatDate(j.createdAt)}</td>
+          <td>${j.price ? formatCurrency(j.price) : '—'}</td>
+          <td>${statusBadge(j.status)}</td>
+          <td>${j.rating ? `⭐ ${j.rating}/5` : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderEarnings() {
+  if (!workerData) return;
+  const s = workerData.stats;
+  document.getElementById('earnMonth').textContent  = formatCurrency(s.earningsThisMonth);
+  document.getElementById('earnTotal').textContent  = formatCurrency(s.totalEarnings);
+  document.getElementById('earnJobsMonth').textContent = s.jobsThisMonth;
+  const avg = s.totalJobs > 0 ? Math.round(s.totalEarnings / s.totalJobs) : 0;
+  document.getElementById('earnAvg').textContent    = formatCurrency(avg);
+
+  const completed = (workerData.recentJobs || []).filter(j => j.status === 'completed');
+  const el = document.getElementById('earningsTable');
+  if (!completed.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">No earnings yet.</div></div>'; return; }
+  el.innerHTML = `<table>
+    <thead><tr><th>Date</th><th>Service</th><th>Customer</th><th>Amount</th></tr></thead>
+    <tbody>${completed.map(j => `<tr>
+      <td>${formatDate(j.completedAt || j.createdAt)}</td>
+      <td>${j.service}</td><td>${j.customerName}</td>
+      <td style="color:var(--teal);font-weight:600">${formatCurrency(j.price)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderProfile() {
+  if (!workerData) return;
+  document.getElementById('profileName').textContent = `${workerData.firstName} ${workerData.lastName}`;
+  document.getElementById('profilePhone').textContent = workerData.phone;
+  document.getElementById('profileCity').textContent  = workerData.city || '—';
+  document.getElementById('profileExp').textContent   = workerData.experience || '—';
+  document.getElementById('profileSince').textContent = formatDate(workerData.createdAt);
+  document.getElementById('profileSkills').innerHTML  = (workerData.skills || []).map(s =>
+    `<span style="background:rgba(0,201,167,0.1);color:var(--teal-light);padding:4px 12px;border-radius:50px;font-size:0.78rem">${s}</span>`
+  ).join('');
+  document.getElementById('profileVerified').innerHTML = workerData.isVerified
+    ? '<span style="color:var(--teal)">✅ Verified Worker</span>'
+    : '<span style="color:var(--gold)">⏳ Verification Pending (within 24h)</span>';
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
