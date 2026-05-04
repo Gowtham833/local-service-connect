@@ -1,0 +1,48 @@
+name: Security Scan & Tests
+
+on:
+  push:
+    branches: [main, develop, 'feature/*']
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * 1'  # Every Monday 2AM UTC
+
+jobs:
+  npm-audit:
+    name: NPM Vulnerability Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+        working-directory: backend
+      - name: Run npm audit (fail on high/critical)
+        run: npm audit --audit-level=high
+        working-directory: backend
+
+  unit-tests:
+    name: Run All Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+        working-directory: backend
+      - run: npm test -- --testPathPattern=tests/
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci_test_secret_not_real
+
+  dependency-review:
+    name: Dependency Review (PRs only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: high

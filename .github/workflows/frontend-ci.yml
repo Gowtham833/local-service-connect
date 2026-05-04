@@ -1,0 +1,59 @@
+name: Frontend CI — Sync to S3 & Invalidate CloudFront
+
+on:
+  push:
+    branches: [main]
+    paths: ['frontend/**']
+  pull_request:
+    branches: [main, develop]
+    paths: ['frontend/**']
+
+jobs:
+  deploy:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Inject runtime config — replaces hardcoded API URL
+      - name: Generate runtime config.js
+        run: |
+          cat > frontend/public/js/config.js << EOF
+          window.__SERVICONNECT_CONFIG__ = {
+            API_BASE_URL: '${{ secrets.BACKEND_API_URL }}',
+            COGNITO_USER_POOL_ID: '${{ secrets.COGNITO_USER_POOL_ID }}',
+            COGNITO_CLIENT_ID: '${{ secrets.COGNITO_CLIENT_ID }}',
+            AWS_REGION: '${{ secrets.AWS_REGION }}'
+          };
+          EOF
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync frontend/public/ s3://${{ secrets.S3_BUCKET_NAME }}/ \
+            --delete \
+            --cache-control "max-age=86400" \
+            --exclude "*.html" \
+            --exclude "js/config.js"
+          # HTML + config.js: no cache (always fresh)
+          aws s3 sync frontend/public/ s3://${{ secrets.S3_BUCKET_NAME }}/ \
+            --cache-control "no-cache, no-store" \
+            --include "*.html" \
+            --include "js/config.js"
+
+      - name: Invalidate CloudFront
+        if: github.ref == 'refs/heads/main'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
