@@ -1,0 +1,256 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Master Stack for ServiConnect Infrastructure'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'serviconnect'
+    Description: 'Project name prefix for all resources'
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'prod']
+    Description: 'Deployment environment (dev or prod)'
+  VpcCidr:
+    Type: String
+    Default: '10.0.0.0/16'
+    Description: 'CIDR block for the VPC'
+  AvailabilityZone1:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: 'First Availability Zone'
+  AvailabilityZone2:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: 'Second Availability Zone'
+  DbInstanceClass:
+    Type: String
+    Default: 'db.t3.micro'
+    Description: 'RDS instance class'
+  DbName:
+    Type: String
+    Default: 'serviconnect'
+    Description: 'PostgreSQL database name'
+  DbUsername:
+    Type: String
+    Default: 'serviconnect_admin'
+    Description: 'PostgreSQL master username'
+  EcsCpu:
+    Type: Number
+    Default: 256
+    Description: 'ECS task CPU units (256 = 0.25 vCPU)'
+  EcsMemory:
+    Type: Number
+    Default: 512
+    Description: 'ECS task memory (MB)'
+  EcsDesiredCount:
+    Type: Number
+    Default: 1
+    Description: 'Number of ECS task instances'
+  BackendImageTag:
+    Type: String
+    Default: 'latest'
+    Description: 'Docker image tag to deploy'
+  BedrockModelId:
+    Type: String
+    Default: 'anthropic.claude-3-haiku-20240307-v1:0'
+    Description: 'AWS Bedrock model ID'
+  AlertEmail:
+    Type: String
+    Default: ''
+    Description: 'Email for CloudWatch alarm notifications (optional)'
+
+Resources:
+  VpcStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/vpc.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        VpcCidr: !Ref VpcCidr
+        AvailabilityZone1: !Ref AvailabilityZone1
+        AvailabilityZone2: !Ref AvailabilityZone2
+
+  IamStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/iam.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        BedrockModelId: !Ref BedrockModelId
+
+  SecretsStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/secrets.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        DbUsername: !Ref DbUsername
+        DbName: !Ref DbName
+
+  EcrStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/ecr.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+
+  AlbStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/alb.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        VpcId: !GetAtt VpcStack.Outputs.VpcId
+        PublicSubnet1Id: !GetAtt VpcStack.Outputs.PublicSubnet1
+        PublicSubnet2Id: !GetAtt VpcStack.Outputs.PublicSubnet2
+
+  RdsStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/rds.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        VpcId: !GetAtt VpcStack.Outputs.VpcId
+        PrivateSubnet1Id: !GetAtt VpcStack.Outputs.PrivateSubnet1
+        PrivateSubnet2Id: !GetAtt VpcStack.Outputs.PrivateSubnet2
+        DbInstanceClass: !Ref DbInstanceClass
+        DbName: !Ref DbName
+        DbUsername: !Ref DbUsername
+        DbSecretArn: !GetAtt SecretsStack.Outputs.DbSecretArn
+        EcsSecurityGroupId: !GetAtt EcsStack.Outputs.EcsSecurityGroupId
+
+  EcsStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/ecs.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        VpcId: !GetAtt VpcStack.Outputs.VpcId
+        PrivateSubnet1Id: !GetAtt VpcStack.Outputs.PrivateSubnet1
+        PrivateSubnet2Id: !GetAtt VpcStack.Outputs.PrivateSubnet2
+        AlbTargetGroupArn: !GetAtt AlbStack.Outputs.TargetGroupArn
+        AlbSecurityGroupId: !GetAtt AlbStack.Outputs.AlbSecurityGroupId
+        EcsTaskRoleArn: !GetAtt IamStack.Outputs.EcsTaskRoleArn
+        EcsExecutionRoleArn: !GetAtt IamStack.Outputs.EcsExecutionRoleArn
+        EcrRepositoryUrl: !GetAtt EcrStack.Outputs.RepositoryUrl
+        BackendImageTag: !Ref BackendImageTag
+        EcsCpu: !Ref EcsCpu
+        EcsMemory: !Ref EcsMemory
+        EcsDesiredCount: !Ref EcsDesiredCount
+        DbSecretArn: !GetAtt SecretsStack.Outputs.DbSecretArn
+        AppSecretArn: !GetAtt SecretsStack.Outputs.AppSecretArn
+        AppName: !Ref ProjectName
+        CloudWatchLogGroup: !GetAtt CloudwatchStack.Outputs.LogGroupName
+
+  S3CloudFrontStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/s3-cloudfront.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        ProjectName: !Ref ProjectName
+
+  CognitoStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/cognito.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+
+  WafStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/waf.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        AlbArn: !GetAtt AlbStack.Outputs.AlbArn
+
+  CloudwatchStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/cloudwatch.yaml
+      Parameters:
+        NamePrefix: !Sub '${ProjectName}-${Environment}'
+        AlertEmail: !Ref AlertEmail
+        EcsClusterName: !Sub '${ProjectName}-${Environment}-cluster'
+        EcsServiceName: !Sub '${ProjectName}-${Environment}-service'
+        AlbArnSuffix: '*'
+
+  DbHostParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${ProjectName}/db-host'
+      Type: String
+      Value: !GetAtt RdsStack.Outputs.DbEndpoint
+
+  DbPortParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${ProjectName}/db-port'
+      Type: String
+      Value: '5432'
+
+  DbNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${ProjectName}/db-name'
+      Type: String
+      Value: !Ref DbName
+
+  FrontendUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${ProjectName}/frontend-url'
+      Type: String
+      Value: !Sub 'https://${S3CloudFrontStack.Outputs.CloudFrontDomain}'
+
+  BedrockModelIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${ProjectName}/bedrock-model-id'
+      Type: String
+      Value: !Ref BedrockModelId
+
+  BedrockRegionParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${ProjectName}/bedrock-region'
+      Type: String
+      Value: 'us-east-1'
+
+  CognitoUserPoolIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${ProjectName}/cognito-user-pool-id'
+      Type: String
+      Value: !GetAtt CognitoStack.Outputs.UserPoolId
+
+  CognitoClientIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${ProjectName}/cognito-client-id'
+      Type: String
+      Value: !GetAtt CognitoStack.Outputs.ClientId
+
+Outputs:
+  AlbDnsName:
+    Description: Backend API URL (ALB)
+    Value: !GetAtt AlbStack.Outputs.AlbDnsName
+  CloudfrontUrl:
+    Description: Frontend URL (CloudFront)
+    Value: !GetAtt S3CloudFrontStack.Outputs.CloudFrontDomain
+  EcrRepositoryUrl:
+    Description: ECR repository URL for Docker pushes
+    Value: !GetAtt EcrStack.Outputs.RepositoryUrl
+  RdsEndpoint:
+    Description: RDS PostgreSQL endpoint
+    Value: !GetAtt RdsStack.Outputs.DbEndpoint
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !GetAtt CognitoStack.Outputs.UserPoolId
+  CognitoClientId:
+    Description: Cognito App Client ID
+    Value: !GetAtt CognitoStack.Outputs.ClientId
+  S3BucketName:
+    Description: S3 bucket for frontend static files
+    Value: !GetAtt S3CloudFrontStack.Outputs.BucketName
+

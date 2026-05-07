@@ -1,0 +1,30 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "AvailabilityZone1",
+    "ParameterValue": "us-east-1a"
+  },
+  {
+    "ParameterKey": "AvailabilityZone2",
+    "ParameterValue": "us-east-1b"
+  },
+  {
+    "ParameterKey": "DbInstanceClass",
+    "ParameterValue": "db.t3.micro"
+  },
+  {
+    "ParameterKey": "EcsCpu",
+    "ParameterValue": "256"
+  },
+  {
+    "ParameterKey": "EcsMemory",
+    "ParameterValue": "512"
+  },
+  {
+    "ParameterKey": "EcsDesiredCount",
+    "ParameterValue": "1"
+  }
+]

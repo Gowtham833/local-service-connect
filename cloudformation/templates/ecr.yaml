@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ECR Repository for ServiConnect Backend'
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Description: Prefix for resource names
+
+Resources:
+  BackendRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub '${NamePrefix}-backend'
+      ImageTagMutability: MUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep last 10 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-backend'
+
+Outputs:
+  RepositoryUrl:
+    Description: URL of the ECR Repository
+    Value: !GetAtt BackendRepository.RepositoryUri
+  RepositoryName:
+    Description: Name of the ECR Repository
+    Value: !Ref BackendRepository

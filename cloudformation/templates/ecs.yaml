@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ECS Fargate Cluster and Service for ServiConnect'
+
+Parameters:
+  NamePrefix:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  AlbTargetGroupArn:
+    Type: String
+  AlbSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  EcsTaskRoleArn:
+    Type: String
+  EcsExecutionRoleArn:
+    Type: String
+  EcrRepositoryUrl:
+    Type: String
+  BackendImageTag:
+    Type: String
+    Default: 'latest'
+  EcsCpu:
+    Type: Number
+    Default: 256
+  EcsMemory:
+    Type: Number
+    Default: 512
+  EcsDesiredCount:
+    Type: Number
+    Default: 1
+  DbSecretArn:
+    Type: String
+  AppSecretArn:
+    Type: String
+  AppName:
+    Type: String
+    Default: 'serviconnect'
+  CloudWatchLogGroup:
+    Type: String
+
+Resources:
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'ECS tasks security group'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          SourceSecurityGroupId: !Ref AlbSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-ecs-sg'
+
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub '${NamePrefix}-cluster'
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${NamePrefix}-backend'
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: !Ref EcsCpu
+      Memory: !Ref EcsMemory
+      TaskRoleArn: !Ref EcsTaskRoleArn
+      ExecutionRoleArn: !Ref EcsExecutionRoleArn
+      ContainerDefinitions:
+        - Name: backend
+          Image: !Sub '${EcrRepositoryUrl}:${BackendImageTag}'
+          Essential: true
+          PortMappings:
+            - ContainerPort: 5000
+              Protocol: tcp
+          Environment:
+            - Name: NODE_ENV
+              Value: production
+            - Name: PORT
+              Value: '5000'
+            - Name: APP_NAME
+              Value: !Ref AppName
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+          Secrets:
+            - Name: JWT_SECRET
+              ValueFrom: !Sub '${AppSecretArn}:jwt_secret::'
+            - Name: DB_PASS
+              ValueFrom: !Sub '${DbSecretArn}:password::'
+            - Name: DB_USER
+              ValueFrom: !Sub '${DbSecretArn}:username::'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CloudWatchLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: backend
+          HealthCheck:
+            Command: ["CMD-SHELL", "wget -qO- http://localhost:5000/api/health || exit 1"]
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+
+  EcsService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub '${NamePrefix}-service'
+      Cluster: !Ref EcsCluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref EcsDesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - !Ref PrivateSubnet1Id
+            - !Ref PrivateSubnet2Id
+          SecurityGroups:
+            - !GetAtt EcsSecurityGroup.GroupId
+          AssignPublicIp: DISABLED
+      LoadBalancers:
+        - TargetGroupArn: !Ref AlbTargetGroupArn
+          ContainerName: backend
+          ContainerPort: 5000
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DeploymentController:
+        Type: ECS
+
+Outputs:
+  EcsClusterName:
+    Description: Name of the ECS Cluster
+    Value: !Ref EcsCluster
+  EcsServiceName:
+    Description: Name of the ECS Service
+    Value: !GetAtt EcsService.Name
+  EcsSecurityGroupId:
+    Description: Security Group ID for ECS Tasks
+    Value: !GetAtt EcsSecurityGroup.GroupId

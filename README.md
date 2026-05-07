@@ -206,6 +206,11 @@ pm2 start server.js --name serviconnect
 pm2 save
 ```
 
+### Option D — AWS CloudFormation (Enterprise Scale)
+ServiConnect includes a complete set of infrastructure-as-code templates for deploying a professional, scalable architecture on AWS.
+See the [Deployment Guides](./docs/DEPLOYMENT_GUIDE.md) for full instructions on deploying via AWS CloudFormation or the AWS Console.
+
+
 ---
 
 ## 📱 Future Enhancements

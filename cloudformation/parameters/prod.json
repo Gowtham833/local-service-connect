@@ -1,0 +1,30 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "AvailabilityZone1",
+    "ParameterValue": "us-east-1a"
+  },
+  {
+    "ParameterKey": "AvailabilityZone2",
+    "ParameterValue": "us-east-1b"
+  },
+  {
+    "ParameterKey": "DbInstanceClass",
+    "ParameterValue": "db.t3.medium"
+  },
+  {
+    "ParameterKey": "EcsCpu",
+    "ParameterValue": "512"
+  },
+  {
+    "ParameterKey": "EcsMemory",
+    "ParameterValue": "1024"
+  },
+  {
+    "ParameterKey": "EcsDesiredCount",
+    "ParameterValue": "2"
+  }
+]

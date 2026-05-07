@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Application Load Balancer for ServiConnect'
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Description: Prefix for resource names
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID
+  PublicSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public Subnet 1 ID
+  PublicSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public Subnet 2 ID
+
+Resources:
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'ALB security group'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-alb-sg'
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${NamePrefix}-alb'
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !Ref AlbSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1Id
+        - !Ref PublicSubnet2Id
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-alb'
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${NamePrefix}-tg'
+      Port: 5000
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckPath: '/api/health'
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: '200'
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-tg'
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  AlbDnsName:
+    Description: DNS Name of the ALB
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+  AlbArn:
+    Description: ARN of the ALB
+    Value: !Ref ApplicationLoadBalancer
+  TargetGroupArn:
+    Description: ARN of the Target Group
+    Value: !Ref TargetGroup
+  AlbSecurityGroupId:
+    Description: Security Group ID of the ALB
+    Value: !GetAtt AlbSecurityGroup.GroupId

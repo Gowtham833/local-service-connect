@@ -1,0 +1,125 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudWatch Logs, Alarms, and Dashboard for ServiConnect'
+
+Parameters:
+  NamePrefix:
+    Type: String
+  AlertEmail:
+    Type: String
+    Default: ''
+    Description: Email for CloudWatch alarm notifications (leave empty to disable)
+  EcsClusterName:
+    Type: String
+  EcsServiceName:
+    Type: String
+  AlbArnSuffix:
+    Type: String
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
+
+Resources:
+  BackendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/${NamePrefix}/backend'
+      RetentionInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-logs'
+
+  AlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${NamePrefix}-alerts'
+
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref AlertsTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  EcsCpuHighAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${NamePrefix}-ecs-cpu-high'
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 2
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Period: 300
+      Statistic: Average
+      Threshold: 80
+      AlarmDescription: 'ECS CPU > 80%'
+      AlarmActions:
+        - !Ref AlertsTopic
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref EcsClusterName
+        - Name: ServiceName
+          Value: !Ref EcsServiceName
+
+  Alb5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${NamePrefix}-alb-5xx'
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      MetricName: HTTPCode_Target_5XX_Count
+      Namespace: AWS/ApplicationELB
+      Period: 300
+      Statistic: Sum
+      Threshold: 10
+      AlarmDescription: 'ALB 5xx errors > 10 in 5 minutes'
+      AlarmActions:
+        - !Ref AlertsTopic
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref AlbArnSuffix
+
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub '${NamePrefix}-dashboard'
+      DashboardBody: !Sub >
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "properties": {
+                "title": "ECS CPU",
+                "metrics": [["AWS/ECS", "CPUUtilization", "ClusterName", "${EcsClusterName}"]],
+                "period": 300,
+                "stat": "Average"
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "title": "ECS Memory",
+                "metrics": [["AWS/ECS", "MemoryUtilization", "ClusterName", "${EcsClusterName}"]],
+                "period": 300,
+                "stat": "Average"
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "title": "ALB Request Count",
+                "metrics": [["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "${AlbArnSuffix}"]],
+                "period": 300,
+                "stat": "Sum"
+              }
+            }
+          ]
+        }
+
+Outputs:
+  LogGroupName:
+    Description: CloudWatch Log Group Name
+    Value: !Ref BackendLogGroup
+  SnsTopicArn:
+    Description: SNS Topic ARN for Alerts
+    Value: !Ref AlertsTopic

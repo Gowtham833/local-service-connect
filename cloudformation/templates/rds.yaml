@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'RDS PostgreSQL Database for ServiConnect'
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Description: Prefix for resource names
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private Subnet 1 ID
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private Subnet 2 ID
+  DbInstanceClass:
+    Type: String
+    Default: 'db.t3.micro'
+    Description: RDS instance class
+  DbName:
+    Type: String
+    Default: 'serviconnect'
+    Description: Database name
+  DbUsername:
+    Type: String
+    Default: 'serviconnect_admin'
+    Description: Database master username
+  DbSecretArn:
+    Type: String
+    Description: ARN of the Secrets Manager secret containing DB credentials
+  EcsSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security Group ID of the ECS tasks
+
+Resources:
+  RdsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'RDS security group - allow ECS only'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref EcsSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-rds-sg'
+
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: 'Subnet group for RDS'
+      SubnetIds:
+        - !Ref PrivateSubnet1Id
+        - !Ref PrivateSubnet2Id
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-db-subnet'
+
+  PostgresDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub '${NamePrefix}-postgres'
+      Engine: postgres
+      EngineVersion: '15.4'
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      StorageEncrypted: true
+      DBName: !Ref DbName
+      MasterUsername: !Ref DbUsername
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DbSecretArn, ':SecretString:password}}']]
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RdsSecurityGroup
+      MultiAZ: false
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'Mon:04:00-Mon:05:00'
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-postgres'
+
+Outputs:
+  DbEndpoint:
+    Description: Endpoint address of the RDS database
+    Value: !GetAtt PostgresDBInstance.Endpoint.Address
+  DbPort:
+    Description: Port of the RDS database
+    Value: !GetAtt PostgresDBInstance.Endpoint.Port

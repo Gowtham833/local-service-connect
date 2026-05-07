@@ -6,7 +6,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                   ServiConnect Team                         │
 │                                                             │
-│  Member 1 ──── Infrastructure Lead (Gowtham)                │
+│  Member 1 ──── Infrastructure Lead (XXXX)                │
 │  Member 2 ──── Backend Developer                            │
 │  Member 3 ──── Frontend Developer                           │
 │  Member 4 ──── AI/ML Engineer                               │
@@ -17,9 +17,9 @@
 
 ---
 
-## 👑 Member 1 — Infrastructure Lead (Gowtham)
+## 👑 Member 1 — Infrastructure Lead ()
 
-**Responsibilities:**
+**Responsibilities:**+
 - Overall AWS architecture design
 - All core Terraform infrastructure (VPC, ECS, ALB, ECR)
 - Docker containerization of the backend
