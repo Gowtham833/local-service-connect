@@ -27,6 +27,13 @@ const Auth = {
     const role = this.getRole();
     if (role === 'customer') window.location.href = '/pages/customer-dashboard.html';
     else if (role === 'worker') window.location.href = '/pages/worker-dashboard.html';
+  },
+  requireAuth(role) {
+    if (!this.isLoggedIn() || (role && this.getRole() !== role)) {
+      this.logout();
+      return false;
+    }
+    return true;
   }
 };
 
@@ -65,6 +72,26 @@ const AuthAPI = {
   workerRegister:   (payload)         => API.post('/api/auth/worker/register', payload),
 };
 
+// ── Customer API ──────────────────────────────────────────────
+const CustomerAPI = {
+  getMe:         () => API.get('/api/customer/me'),
+  getBookings:   () => API.get('/api/customer/bookings'),
+  getWorkers:    (params) => API.get(`/api/customer/workers?${new URLSearchParams(params)}`),
+  postBooking:   (payload) => API.post('/api/customer/bookings', payload),
+  rateBooking:   (id, rating, comment) => API.patch(`/api/customer/bookings/${id}/rate`, { rating, comment }),
+  getTracking:   (id) => API.get(`/api/customer/bookings/${id}/tracking`),
+};
+
+// ── Worker API ────────────────────────────────────────────────
+const WorkerAPI = {
+  getMe:              () => API.get('/api/worker/me'),
+  toggleAvailability: (isAvailable) => API.patch('/api/worker/availability', { isAvailable }),
+  updateLocation:     (lat, lng) => API.patch('/api/worker/location', { lat, lng }),
+  getOpenJobs:        () => API.get('/api/worker/open-jobs'),
+  acceptJob:          (id) => API.patch(`/api/worker/jobs/${id}/accept`),
+  completeJob:        (id, price) => API.patch(`/api/worker/jobs/${id}/complete`, { price }),
+};
+
 // ── Toast Notifications ───────────────────────────────────────
 function showToast(message, type = 'info') {
   const existing = document.querySelector('.sc-toast');
@@ -87,4 +114,6 @@ function showToast(message, type = 'info') {
 window.Auth = Auth;
 window.API  = API;
 window.AuthAPI = AuthAPI;
+window.CustomerAPI = CustomerAPI;
+window.WorkerAPI = WorkerAPI;
 window.showToast = showToast;
