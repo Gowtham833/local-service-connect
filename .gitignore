@@ -28,6 +28,7 @@ aws-credentials.json
 dist/
 build/
 *.zip
+*.tar
 
 # Logs
 logs/

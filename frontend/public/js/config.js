@@ -7,8 +7,8 @@
  * DO NOT hardcode real API URLs or IDs here.
  */
 window.__SERVICONNECT_CONFIG__ = window.__SERVICONNECT_CONFIG__ || {
-  API_BASE_URL: 'http://serviconnect-dev-alb-1756877514.us-east-1.elb.amazonaws.com',
-  COGNITO_USER_POOL_ID: 'us-east-1_aOZiuoJmc',
-  COGNITO_CLIENT_ID: '3gj011hpt2j6e3342l24oadet1',
+  API_BASE_URL: 'http://32.194.0.247',
+  COGNITO_USER_POOL_ID: '',
+  COGNITO_CLIENT_ID: '',
   AWS_REGION: 'us-east-1',
 };

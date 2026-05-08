@@ -492,6 +492,16 @@ Resources:
               Value: !Ref ProjectName
             - Name: AWS_REGION
               Value: !Ref AWS::Region
+            - Name: DB_HOST
+              Value: !GetAtt PostgresDBInstance.Endpoint.Address
+            - Name: DB_NAME
+              Value: !Ref DbName
+            - Name: FRONTEND_URL
+              Value: !Sub 'https://${CloudFrontDistribution.DomainName}'
+            - Name: COGNITO_USER_POOL_ID
+              Value: !Ref UserPool
+            - Name: COGNITO_CLIENT_ID
+              Value: !Ref UserPoolClient
           Secrets:
             - Name: JWT_SECRET
               ValueFrom: !Sub '${AppSecretsSecret}:jwt_secret::'

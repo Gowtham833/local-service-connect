@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ServiConnect EC2 Single-Click Deployment (Beginner Friendly)'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'serviconnect'
+    Description: 'Project name prefix'
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'prod']
+  VpcCidr:
+    Type: String
+    Default: '10.0.0.0/16'
+  AvailabilityZone1:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: 'Select the first Availability Zone'
+  AvailabilityZone2:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: 'Select the second Availability Zone (must be different from the first)'
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: 'The name of the Key Pair (.pem) you created in AWS'
+  DbUsername:
+    Type: String
+    Default: 'serviconnect_admin'
+  DbPassword:
+    Type: String
+    NoEcho: true
+    Description: 'Database password (minimum 8 characters)'
+    MinLength: 8
+  DbName:
+    Type: String
+    Default: 'serviconnect'
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-vpc' }]
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '10.0.1.0/24'
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Ref AvailabilityZone1
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '10.0.2.0/24'
+      AvailabilityZone: !Ref AvailabilityZone1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '10.0.3.0/24'
+      AvailabilityZone: !Ref AvailabilityZone2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # Security Groups
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Allow SSH and HTTP to EC2'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Allow Postgres from EC2'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+
+  # RDS Database
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: 'Subnets for RDS'
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      EngineVersion: '16.4'
+      DBInstanceClass: db.t3.micro
+      MasterUsername: !Ref DbUsername
+      MasterUserPassword: !Ref DbPassword
+      DBName: !Ref DbName
+      AllocatedStorage: 20
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups: [!Ref RDSSecurityGroup]
+      PubliclyAccessible: false
+      MultiAZ: false
+
+  # EC2 Instance
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    DependsOn: Database
+    Properties:
+      InstanceType: t2.micro
+      KeyName: !Ref KeyPairName
+      ImageId: ami-0453ec754f44f9a4a # Amazon Linux 2023 for us-east-1
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds: [!Ref EC2SecurityGroup]
+      Tags: [{ Key: Name, Value: !Sub '${ProjectName}-server' }]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          exec > /var/log/serviconnect-init.log 2>&1
+          set -e
+
+          echo "====== ServiConnect Setup Starting ======"
+
+          # Install Node and Nginx
+          yum update -y
+          curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+          yum install -y nodejs git nginx
+          npm install -g pm2
+
+          mkdir -p /home/ec2-user/app/backend
+          mkdir -p /home/ec2-user/app/frontend/public
+
+          PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || echo "localhost")
+
+          # Create .env for backend
+          cat > /home/ec2-user/app/backend/.env << ENVEOF
+          PORT=5000
+          NODE_ENV=development
+          APP_NAME=${ProjectName}
+          AWS_REGION=${AWS::Region}
+          DB_HOST=${Database.Endpoint.Address}
+          DB_PORT=5432
+          DB_NAME=${DbName}
+          DB_USER=${DbUsername}
+          DB_PASS=${DbPassword}
+          JWT_SECRET=ServiConnect_Secure_Key_${AWS::AccountId}
+          JWT_EXPIRE=7d
+          FRONTEND_URL=http://$PUBLIC_IP
+          ENVEOF
+
+          chown ec2-user:ec2-user /home/ec2-user/app/backend/.env
+          chmod 600 /home/ec2-user/app/backend/.env
+
+          # Nginx config
+          cat > /etc/nginx/conf.d/serviconnect.conf << 'NGINXEOF'
+          server {
+              listen 80 default_server;
+              server_name _;
+              root /home/ec2-user/app/frontend/public;
+              index index.html;
+
+              location / {
+                  try_files $uri $uri/ /index.html;
+              }
+
+              location /api/ {
+                  proxy_pass         http://127.0.0.1:5000;
+                  proxy_http_version 1.1;
+                  proxy_set_header   Host              $host;
+                  proxy_set_header   X-Real-IP         $remote_addr;
+                  proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+              }
+          }
+          NGINXEOF
+
+          rm -f /etc/nginx/conf.d/default.conf
+          chmod 755 /home/ec2-user
+          systemctl enable nginx && systemctl start nginx
+
+          # Start script
+          cat > /home/ec2-user/start-app.sh << 'STARTEOF'
+          #!/bin/bash
+          cd /home/ec2-user/app/backend
+          npm install
+          pm2 delete serviconnect 2>/dev/null || true
+          pm2 start server.js --name serviconnect
+          pm2 save
+          echo "ServiConnect is LIVE!"
+          STARTEOF
+
+          chown ec2-user:ec2-user /home/ec2-user/start-app.sh
+          chmod +x /home/ec2-user/start-app.sh
+          chown -R ec2-user:ec2-user /home/ec2-user/app
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref EC2Instance
+      Domain: vpc
+
+Outputs:
+  AWebsiteURL:
+    Description: "Your Website URL"
+    Value: !Sub "http://${ElasticIP}"
+  BServerIP:
+    Description: "Server IP Address for config.js"
+    Value: !Ref ElasticIP
+  DUploadBackend:
+    Description: "Upload Backend Command"
+    Value: !Sub "scp -i YOUR_KEY.pem -r ./backend/* ec2-user@${ElasticIP}:/home/ec2-user/app/backend/"
+  EUploadFrontend:
+    Description: "Upload Frontend Command"
+    Value: !Sub "scp -i YOUR_KEY.pem -r ./frontend/public/* ec2-user@${ElasticIP}:/home/ec2-user/app/frontend/public/"

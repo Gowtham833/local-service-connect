@@ -85,20 +85,20 @@ async function loadConfig() {
 
   return {
     port:             parseInt(process.env.PORT) || 5000,
-    jwtSecret:        appSecret.jwt_secret,
-    jwtExpire:        appSecret.jwt_expire || '7d',
-    dbHost:           dbHost,
-    dbPort:           parseInt(dbPort) || 5432,
-    dbName:           dbName,
-    dbUser:           dbSecret.username,
-    dbPass:           dbSecret.password,
-    frontendUrl:      frontendUrl,
+    jwtSecret:        process.env.JWT_SECRET || (appSecret && appSecret.jwt_secret),
+    jwtExpire:        process.env.JWT_EXPIRE || (appSecret && appSecret.jwt_expire) || '7d',
+    dbHost:           process.env.DB_HOST || dbHost,
+    dbPort:           parseInt(process.env.DB_PORT || dbPort) || 5432,
+    dbName:           process.env.DB_NAME || dbName,
+    dbUser:           process.env.DB_USER || (dbSecret && dbSecret.username),
+    dbPass:           process.env.DB_PASS || (dbSecret && dbSecret.password),
+    frontendUrl:      process.env.FRONTEND_URL || frontendUrl,
     awsRegion:        AWS_REGION,
-    bedrockRegion:    bedrockRegion  || 'us-east-1',
-    bedrockModelId:   bedrockModelId || 'anthropic.claude-3-haiku-20240307-v1:0',
-    sesFromEmail:     sesFromEmail,
-    cognitoUserPoolId,
-    cognitoClientId,
+    bedrockRegion:    process.env.BEDROCK_REGION || bedrockRegion  || 'us-east-1',
+    bedrockModelId:   process.env.BEDROCK_MODEL_ID || bedrockModelId || 'anthropic.claude-3-haiku-20240307-v1:0',
+    sesFromEmail:     process.env.SES_FROM_EMAIL || sesFromEmail,
+    cognitoUserPoolId:process.env.COGNITO_USER_POOL_ID || cognitoUserPoolId,
+    cognitoClientId:  process.env.COGNITO_CLIENT_ID || cognitoClientId,
   };
 }
 

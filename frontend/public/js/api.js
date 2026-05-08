@@ -23,6 +23,11 @@ const Auth = {
     [TOKEN_KEY, ROLE_KEY, USER_KEY].forEach(k => localStorage.removeItem(k));
     window.location.href = '/';
   },
+  redirectToDashboard() {
+    const role = this.getRole();
+    if (role === 'customer') window.location.href = '/pages/customer-dashboard.html';
+    else if (role === 'worker') window.location.href = '/pages/worker-dashboard.html';
+  }
 };
 
 // ── API Request Helper ────────────────────────────────────────
@@ -35,14 +40,14 @@ async function apiRequest(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  const res = await fetch(url, { ...options, headers });
-  const data = await res.json();
-
-  if (!res.ok) {
-    const msg = data.message || data.errors?.[0]?.msg || 'Request failed';
-    throw new Error(msg);
+  try {
+    const res = await fetch(url, { ...options, headers });
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, data };
+  } catch (err) {
+    console.error('API Error:', err);
+    return { ok: false, data: { message: 'Network error or server unreachable' } };
   }
-  return data;
 }
 
 // ── Shorthand API Methods ─────────────────────────────────────
@@ -50,6 +55,14 @@ const API = {
   get:   (path)         => apiRequest(path, { method: 'GET' }),
   post:  (path, body)   => apiRequest(path, { method: 'POST',  body: JSON.stringify(body) }),
   patch: (path, body)   => apiRequest(path, { method: 'PATCH', body: JSON.stringify(body) }),
+};
+
+// ── Auth API ──────────────────────────────────────────────────
+const AuthAPI = {
+  customerLogin:    (phone, password) => API.post('/api/auth/customer/login', { phone, password }),
+  customerRegister: (payload)         => API.post('/api/auth/customer/register', payload),
+  workerLogin:      (phone, password) => API.post('/api/auth/worker/login', { phone, password }),
+  workerRegister:   (payload)         => API.post('/api/auth/worker/register', payload),
 };
 
 // ── Toast Notifications ───────────────────────────────────────
@@ -73,4 +86,5 @@ function showToast(message, type = 'info') {
 // Expose globally
 window.Auth = Auth;
 window.API  = API;
+window.AuthAPI = AuthAPI;
 window.showToast = showToast;
