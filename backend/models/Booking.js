@@ -9,7 +9,7 @@ module.exports = (sequelize) => {
     description:         { type: DataTypes.TEXT,        allowNull: true },
     address:             { type: DataTypes.STRING(500),  allowNull: false },
     status: {
-      type: DataTypes.ENUM('open', 'pending', 'active', 'completed', 'cancelled'),
+      type: DataTypes.ENUM('open', 'pending', 'accepted', 'in_progress', 'completed', 'cancelled'),
       defaultValue: 'open',
     },
     price:               { type: DataTypes.FLOAT, allowNull: true },

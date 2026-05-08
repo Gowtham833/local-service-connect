@@ -123,16 +123,12 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function statusBadge(status) {
-  const colors = {
-    open:      '#3b82f6', // Blue
-    pending:   '#f59e0b', // Gold
-    active:    '#10b981', // Teal
-    completed: '#10b981', // Teal
-    cancelled: '#ef4444', // Red
-  };
-  return `<span style="background:${colors[status] || '#94a3b8'}; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; text-transform:uppercase">${status}</span>`;
-}
+const statusBadge = (status) => {
+  const s = status ? status.toLowerCase() : 'open';
+  const cls = `status-badge status-${s}`;
+  const label = s.replace('_', ' ').toUpperCase();
+  return `<span class="${cls}">${label}</span>`;
+};
 
 // Expose globally
 window.Auth = Auth;

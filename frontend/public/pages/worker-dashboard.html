@@ -175,26 +175,34 @@ function showPage(name) {
 }
 
 async function loadDashboard() {
-  const { ok, data } = await WorkerAPI.getMe();
-  if (!ok) { showToast('Session expired.', 'error'); Auth.logout(); return; }
+  try {
+    const { ok, data } = await WorkerAPI.getMe();
+    if (!ok || !data.success) {
+      showToast('Session expired. Please login again.', 'error');
+      Auth.logout();
+      return;
+    }
 
-  workerData = data.data;
-  const s = workerData.stats || {};
+    workerData = data.data;
+    const s = workerData.stats || {};
 
-  document.getElementById('sidebarName').textContent = `${workerData.firstName} ${workerData.lastName}`;
-  document.getElementById('greetSub').textContent = `Hello, ${workerData.firstName}! You have ${s.activeJobs || 0} active job(s).`;
+    document.getElementById('sidebarName').textContent = `${workerData.firstName} ${workerData.lastName}`;
+    document.getElementById('greetSub').textContent = `Hello, ${workerData.firstName}! You have ${s.activeJobs || 0} active job(s).`;
 
-  // Stats
-  document.getElementById('statTotal').textContent = s.totalJobs || 0;
-  document.getElementById('statMonth').textContent = s.jobsThisMonth || 0;
-  document.getElementById('statEarnings').textContent = formatCurrency(s.totalEarnings || 0);
-  document.getElementById('statRating').textContent = s.avgRating ? `${s.avgRating} ★` : 'New';
+    // Stats
+    document.getElementById('statTotal').textContent = s.totalJobs || 0;
+    document.getElementById('statMonth').textContent = s.jobsThisMonth || 0;
+    document.getElementById('statEarnings').textContent = formatCurrency(s.totalEarnings || 0);
+    document.getElementById('statRating').textContent = s.avgRating ? `${s.avgRating} ★` : 'New';
 
-  // Availability
-  updateAvailUI(workerData.isAvailable || false);
+    // Availability
+    updateAvailUI(workerData.isAvailable || false);
 
-  renderRecentJobs(workerData.recentJobs || []);
-  renderActiveJob(workerData.recentJobs || []);
+    renderRecentJobs(workerData.recentJobs || []);
+    renderActiveJob(workerData.recentJobs || []);
+  } catch (err) {
+    console.error('Worker Dashboard Load Error:', err);
+  }
 }
 
 function updateAvailUI(isAvail) {

@@ -258,25 +258,36 @@ function updateMapMarkers(workers) {
 
 // ── Load dashboard ────────────────────────────────────────────
 async function loadDashboard() {
-  const { ok, data } = await CustomerAPI.getMe();
-  if (!ok) { showToast('Session expired. Please login again.', 'error'); Auth.logout(); return; }
+  try {
+    const { ok, data } = await CustomerAPI.getMe();
+    if (!ok || !data.success) {
+      showToast('Session expired. Please login again.', 'error');
+      Auth.logout();
+      return;
+    }
+    
+    customerData = data.data;
+    const s = customerData.stats || {};
+    
+    // Update basic info
+    document.getElementById('sidebarName').textContent = `${customerData.firstName} ${customerData.lastName}`;
+    document.getElementById('greetName').textContent = customerData.firstName;
+    
+    // Update stats
+    document.getElementById('statTotal').textContent    = s.totalBookings || 0;
+    document.getElementById('statCompleted').textContent = s.completed || 0;
+    document.getElementById('statSpent').textContent    = formatCurrency(s.totalSpent || 0);
+    document.getElementById('statActive').textContent   = (s.accepted || 0) + (s.in_progress || 0) + (s.open || 0) + (s.pending || 0);
 
-  customerData = data.data;
-  const s = customerData.stats || {};
-
-  document.getElementById('sidebarName').textContent = `${customerData.firstName} ${customerData.lastName}`;
-  document.getElementById('greetName').textContent = customerData.firstName;
-  document.getElementById('statTotal').textContent = s.totalBookings || 0;
-  document.getElementById('statCompleted').textContent = s.completed || 0;
-  document.getElementById('statActive').textContent = (s.active || 0) + (s.pending || 0);
-  document.getElementById('statSpent').textContent = formatCurrency(s.totalSpent || 0);
-
-  renderRecentBookings(customerData.recentBookings || []);
-  renderActiveJob(customerData.recentBookings || []);
+    renderRecentBookings(customerData.recentBookings || []);
+    renderActiveJob(customerData.recentBookings || []);
+  } catch (err) {
+    console.error('Dashboard Load Error:', err);
+  }
 }
 
 function renderActiveJob(bookings) {
-  const active = (bookings || []).filter(b => b.status === 'active');
+  const active = (bookings || []).filter(b => b.status === 'accepted' || b.status === 'in_progress');
   const card = document.getElementById('activeJobCard');
   const content = document.getElementById('activeJobContent');
   
@@ -303,7 +314,12 @@ function renderActiveJob(bookings) {
 
 function renderRecentBookings(bookings) {
   const el = document.getElementById('recentBookings');
-  if (!bookings.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No bookings yet. Book your first service!</div></div>'; return; }
+  if (!el) return;
+
+  if (!Array.isArray(bookings) || bookings.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No recent bookings.</div></div>';
+    return;
+  }
   el.innerHTML = `
     <table>
       <thead><tr><th>Service</th><th>Worker</th><th>Date</th><th>Price</th><th>Status</th><th>Action</th></tr></thead>
@@ -327,20 +343,37 @@ function renderRecentBookings(bookings) {
 async function loadAllBookings() {
   const { ok, data } = await CustomerAPI.getBookings();
   const el = document.getElementById('allBookings');
-  if (!ok || !data.data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No bookings found.</div></div>'; return; }
+  if (!el) return;
+
+  if (!ok || !data || !data.success || !Array.isArray(data.data) || data.data.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No bookings found. Start by booking a service!</div></div>';
+    return;
+  }
+
+  const bookings = data.data;
   el.innerHTML = `
     <table>
-      <thead><tr><th>Service</th><th>Worker</th><th>Address</th><th>Date</th><th>Price</th><th>Status</th><th>Action</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Service</th>
+          <th>Worker</th>
+          <th>Status</th>
+          <th>Price</th>
+          <th>Rating</th>
+          <th>Track</th>
+        </tr>
+      </thead>
       <tbody>
-        ${data.data.map(b => `
+        ${bookings.map(b => `
           <tr>
-            <td>${b.service}</td>
-            <td>${b.workerName || '—'}</td>
-            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.address}</td>
             <td>${formatDate(b.createdAt)}</td>
-            <td>${b.price ? formatCurrency(b.price) : '—'}</td>
+            <td><div style="font-weight:600">${b.service}</div><div style="font-size:0.75rem;color:var(--text-dim)">${b.id.substring(0,8)}</div></td>
+            <td>${b.workerName || '—'}</td>
             <td>${statusBadge(b.status)}</td>
+            <td>${formatCurrency(b.price)}</td>
             <td>${b.status === 'completed' && !b.rating ? `<button class="btn btn-ghost btn-sm" onclick="openRateModal('${b.id}')">⭐ Rate</button>` : b.rating ? `⭐ ${b.rating}/5` : '—'}</td>
+            <td>${(b.status === 'accepted' || b.status === 'in_progress') ? `<button class="btn btn-primary btn-sm" onclick="startTrackingWorker('${b.id}')">📍 Track</button>` : '—'}</td>
           </tr>`).join('')}
       </tbody>
     </table>`;
