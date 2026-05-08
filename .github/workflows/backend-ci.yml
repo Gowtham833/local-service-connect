@@ -2,10 +2,10 @@ name: Backend CI — Build, Test & Push to ECR
 
 on:
   push:
-    branches: [main, develop, 'feature/backend-*']
+    branches: [master, develop, 'feature/backend-*']
     paths: ['backend/**']
   pull_request:
-    branches: [main, develop]
+    branches: [master, develop]
     paths: ['backend/**']
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop'
 
     permissions:
       id-token: write
