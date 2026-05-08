@@ -7,10 +7,15 @@
 <link rel="stylesheet" href="/css/shared.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 <div class="dash-layout">
-
+  <div class="mobile-header">
+    <div class="sidebar-logo">Servi<span>Connect</span></div>
+    <div class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</div>
+  </div>
+  
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">Servi<span>Connect</span></div>
@@ -174,22 +179,22 @@ async function loadDashboard() {
   if (!ok) { showToast('Session expired.', 'error'); Auth.logout(); return; }
 
   workerData = data.data;
-  const s = workerData.stats;
+  const s = workerData.stats || {};
 
   document.getElementById('sidebarName').textContent = `${workerData.firstName} ${workerData.lastName}`;
-  document.getElementById('greetSub').textContent = `Hello, ${workerData.firstName}! You have ${s.activeJobs} active job(s).`;
+  document.getElementById('greetSub').textContent = `Hello, ${workerData.firstName}! You have ${s.activeJobs || 0} active job(s).`;
 
   // Stats
-  document.getElementById('statTotal').textContent = s.totalJobs;
-  document.getElementById('statMonth').textContent = s.jobsThisMonth;
-  document.getElementById('statEarnings').textContent = formatCurrency(s.totalEarnings);
+  document.getElementById('statTotal').textContent = s.totalJobs || 0;
+  document.getElementById('statMonth').textContent = s.jobsThisMonth || 0;
+  document.getElementById('statEarnings').textContent = formatCurrency(s.totalEarnings || 0);
   document.getElementById('statRating').textContent = s.avgRating ? `${s.avgRating} ★` : 'New';
 
   // Availability
-  updateAvailUI(workerData.isAvailable);
+  updateAvailUI(workerData.isAvailable || false);
 
-  renderRecentJobs(workerData.recentJobs);
-  renderActiveJob(workerData.recentJobs);
+  renderRecentJobs(workerData.recentJobs || []);
+  renderActiveJob(workerData.recentJobs || []);
 }
 
 function updateAvailUI(isAvail) {
@@ -232,6 +237,16 @@ function startLocationTracking() {
     pos => {
       console.log('Location update:', pos.coords.latitude, pos.coords.longitude);
       WorkerAPI.updateLocation(pos.coords.latitude, pos.coords.longitude);
+      
+      const activeJob = (workerData?.recentJobs || []).find(j => j.status === 'accepted' || j.status === 'in_progress');
+      if (activeJob && socket) {
+        socket.emit('update_location', {
+          bookingId: activeJob.id,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          workerId: workerData.id
+        });
+      }
     },
     err => console.error('Tracking error:', err),
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -279,23 +294,62 @@ function renderActiveJob(jobs) {
       <div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:4px">ADDRESS</div><div style="font-weight:600">${j.address || '—'}</div></div>
       <div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:4px">PHONE</div><div style="font-weight:600">${j.customerPhone || '—'}</div></div>
     </div>
-    <button class="btn btn-teal" style="margin-top:20px" onclick="openComplete('${j.id}')">✅ Mark as Done</button>`;
+      ${j.status === 'accepted' ? `<button class="btn btn-primary" onclick="startJob('${j.id}')">▶ Start Work</button>` : ''}
+      <button class="btn btn-teal" onclick="openComplete('${j.id}')">✅ Mark as Done</button>
+    </div>
+    
+    <!-- Real-time Chat -->
+    <div style="margin-top:20px;background:var(--navy-soft);padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,0.05)">
+      <div style="font-size:0.85rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">💬 Chat with Customer</div>
+      <div id="chatMessages" style="height:120px;overflow-y:auto;font-size:0.8rem;margin-bottom:10px;padding:5px;display:flex;flex-direction:column;gap:5px"></div>
+      <div style="display:flex;gap:5px">
+        <input type="text" id="chatInput" placeholder="Type a message..." style="flex:1;background:var(--navy-mid);border:none;border-radius:4px;padding:8px 12px;color:white;font-size:0.8rem">
+        <button onclick="sendChatMessage()" class="btn btn-primary btn-sm">Send</button>
+      </div>
+    </div>`;
+
+  // Join booking room for real-time updates
+  if (socket) socket.emit('join_booking', j.id);
+  activeBookingId = j.id;
   
-  if (j.lat && j.lng) {
+  if (j.customerLat && j.customerLng) {
     setTimeout(() => {
+      const cPos = [j.customerLat, j.customerLng];
+      const wPos = workerData.lat && workerData.lng ? [workerData.lat, workerData.lng] : null;
+
       if (!jobMap) {
-        jobMap = L.map('jobMap').setView([j.lat, j.lng], 14);
+        jobMap = L.map('jobMap').setView(cPos, 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors'
         }).addTo(jobMap);
       } else {
-        jobMap.setView([j.lat, j.lng], 14);
+        jobMap.setView(cPos, 14);
       }
+      
+      // Clear existing markers
       if (jobMarker) jobMap.removeLayer(jobMarker);
-      jobMarker = L.marker([j.lat, j.lng])
-        .bindPopup(`<b>Job Site: ${j.customerName}</b><br>${j.address}`)
-        .addTo(jobMap)
-        .openPopup();
+      if (window.workerMarker) jobMap.removeLayer(window.workerMarker);
+
+      // Customer Marker
+      jobMarker = L.marker(cPos)
+        .bindPopup(`<b>Customer: ${j.customerName}</b><br>${j.address}`)
+        .addTo(jobMap);
+      
+      // Worker Marker (Self)
+      if (wPos) {
+        window.workerMarker = L.marker(wPos, {
+          icon: L.divIcon({
+            html: `<div style="background:var(--teal);width:12px;height:12px;border-radius:50%;border:2px solid white"></div>`,
+            className: 'worker-marker'
+          })
+        }).bindPopup('<b>You are here</b>').addTo(jobMap);
+        
+        // Fit bounds to show both
+        const bounds = L.latLngBounds([cPos, wPos]);
+        jobMap.fitBounds(bounds, { padding: [40, 40] });
+      } else {
+        jobMarker.openPopup();
+      }
     }, 100);
   }
 }
@@ -339,6 +393,16 @@ function openComplete(id) {
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function startJob(id) {
+  const { ok, data } = await WorkerAPI.startJob(id);
+  if (ok) {
+    showToast('▶ Work started! Keep up the good work.');
+    loadDashboard();
+  } else {
+    showToast(data.message || 'Could not start job.', 'error');
+  }
+}
 
 async function completeJob() {
   const id    = document.getElementById('completeJobId').value;
@@ -410,6 +474,52 @@ function renderProfile() {
 }
 
 loadDashboard();
+
+// ── Socket.io Implementation ──────────────────────────────────
+const socket = initSocket();
+if (socket) {
+  socket.on('connect', () => {
+    socket.emit('join_workers');
+  });
+
+  socket.on('new_job', (job) => {
+    showToast(`🔔 New ${job.service} request nearby!`, 'info');
+    // If on jobs page, refresh list
+    if (document.getElementById('page-jobs').style.display === 'block') {
+      loadOpenJobs();
+    }
+  });
+
+  socket.on('new_message', (data) => {
+    const chatBox = document.getElementById('chatMessages');
+    if (!chatBox) return;
+    const msgEl = document.createElement('div');
+    msgEl.style.padding = '5px 10px';
+    msgEl.style.borderRadius = '4px';
+    msgEl.style.maxWidth = '80%';
+    msgEl.style.alignSelf = data.sender === 'worker' ? 'flex-end' : 'flex-start';
+    msgEl.style.background = data.sender === 'worker' ? 'var(--orange)' : 'var(--navy-mid)';
+    msgEl.style.color = 'white';
+    msgEl.innerHTML = `<div style="font-size:0.6rem;opacity:0.7">${data.sender === 'worker' ? 'You' : 'Customer'}</div><div>${data.text}</div>`;
+    chatBox.appendChild(msgEl);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+}
+
+let activeBookingId = null;
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !activeBookingId || !socket) return;
+  
+  socket.emit('send_message', {
+    bookingId: activeBookingId,
+    sender: 'worker',
+    text,
+    timestamp: new Date()
+  });
+  input.value = '';
+}
 </script>
 </body>
 </html>

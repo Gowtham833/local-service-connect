@@ -24,8 +24,25 @@ router.get('/me', async (req, res, next) => {
     res.json({
       success: true, data: {
         ...customer.toJSON(),
-        stats: { totalBookings: bookings.length, completed: completed.length, active: bookings.filter(b => b.status === 'active').length, totalSpent },
-        recentBookings: [...bookings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
+        stats: { 
+          totalBookings: bookings.length, 
+          completed: completed.length, 
+          active: bookings.filter(b => b.status === 'active').length, 
+          pending: bookings.filter(b => b.status === 'pending' || b.status === 'open').length,
+          totalSpent 
+        },
+        recentBookings: [...bookings]
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5)
+          .map(b => {
+            const json = b.toJSON();
+            if (json.worker) {
+              json.workerName = `${json.worker.firstName} ${json.worker.lastName}`;
+              json.workerPhone = json.worker.phone;
+              json.workerRating = json.worker.rating;
+            }
+            return json;
+          }),
       }
     });
   } catch (err) { next(err); }
@@ -41,6 +58,7 @@ router.get('/workers', async (req, res, next) => {
 
     const workers = await db.Worker.findAll({ where, attributes: { exclude: ['passwordHash', 'cognitoSub'] } });
 
+    const { calculateWorkerScore } = require('../services/workerMatchingAI');
     let data = workers.map(w => {
       const json = w.toJSON();
       let distance = null;
@@ -52,13 +70,14 @@ router.get('/workers', async (req, res, next) => {
         );
         distance = Math.round(distance * 10) / 10;
       }
-      return { ...json, distance };
+      
+      const score = calculateWorkerScore(json, distance);
+      return { ...json, distance, score };
     });
 
-    if (lat && lng) {
-      data = data.filter(w => w.distance === null || w.distance <= parseFloat(radius));
-      data.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-    }
+    // Sort by AI score instead of just distance
+    data.sort((a, b) => b.score - a.score);
+    
     res.json({ success: true, count: data.length, data });
   } catch (err) { next(err); }
 });
@@ -87,7 +106,14 @@ router.post('/bookings', async (req, res, next) => {
       aiMatchedWorkerIds: matchedIds.slice(0, 5),
     });
 
-    res.status(201).json({ success: true, data: { ...booking.toJSON(), aiPriceEstimate: priceEst } });
+    const bookingJson = booking.toJSON();
+    const { broadcastNewJob } = require('../services/socketService');
+    broadcastNewJob({
+      ...bookingJson,
+      customerName: `${req.user.firstName} ${req.user.lastName}`,
+    });
+
+    res.status(201).json({ success: true, data: { ...bookingJson, aiPriceEstimate: priceEst } });
   } catch (err) { next(err); }
 });
 
@@ -99,7 +125,17 @@ router.get('/bookings', async (req, res, next) => {
       order: [['createdAt', 'DESC']],
       include: [{ model: db.Worker, as: 'worker', attributes: ['id', 'firstName', 'lastName', 'phone', 'rating'] }],
     });
-    res.json({ success: true, count: bookings.length, data: bookings });
+    const data = bookings.map(b => {
+      const json = b.toJSON();
+      if (json.worker) {
+        json.workerName = `${json.worker.firstName} ${json.worker.lastName}`;
+        json.workerPhone = json.worker.phone;
+        json.workerRating = json.worker.rating;
+      }
+      return json;
+    });
+
+    res.json({ success: true, count: data.length, data });
   } catch (err) { next(err); }
 });
 
@@ -126,6 +162,39 @@ router.patch('/bookings/:id/rate', async (req, res, next) => {
     await db.Worker.update({ rating: Math.round(avg * 10) / 10 }, { where: { id: booking.workerId } });
 
     res.json({ success: true, message: 'Review submitted', sentiment: sentimentResult.sentiment });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/customer/bookings/:id/tracking ───────────────────
+router.get('/bookings/:id/tracking', async (req, res, next) => {
+  try {
+    const booking = await db.Booking.findOne({
+      where: { id: req.params.id, customerId: req.user.id },
+      include: [{ model: db.Worker, as: 'worker', attributes: ['id', 'firstName', 'lastName', 'phone', 'lat', 'lng', 'rating', 'experience', 'avatar', 'vehicleInfo'] }]
+    });
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
+    if (!booking.worker) return res.status(400).json({ success: false, message: 'No worker assigned to this booking.' });
+    
+    const w = booking.worker;
+    res.json({
+      success: true,
+      status: booking.status,
+      lat: w.lat, lng: w.lng,
+      workerName: `${w.firstName} ${w.lastName}`,
+      workerPhone: w.phone,
+      workerAvatar: w.avatar,
+      workerRating: w.rating,
+      workerExp: w.experience
+    });
+  } catch (err) { next(err); }
+});
+
+// ── PATCH /api/customer/location ─────────────────────────────
+router.patch('/location', async (req, res, next) => {
+  try {
+    const { lat, lng } = req.body;
+    await db.Customer.update({ lat, lng }, { where: { id: req.user.id } });
+    res.json({ success: true, lat, lng });
   } catch (err) { next(err); }
 });
 

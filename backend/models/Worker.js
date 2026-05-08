@@ -17,6 +17,10 @@ module.exports = (sequelize) => {
     rating:       { type: DataTypes.FLOAT,       defaultValue: 0 },
     lat:          { type: DataTypes.FLOAT,       allowNull: true },
     lng:          { type: DataTypes.FLOAT,       allowNull: true },
+    completionRate: { type: DataTypes.FLOAT,     defaultValue: 1.0 },
+    responseTime:   { type: DataTypes.INTEGER,   defaultValue: 5 }, // In minutes
+    cancellationRate: { type: DataTypes.FLOAT,   defaultValue: 0.0 },
+    vehicleInfo:  { type: DataTypes.STRING(200), allowNull: true },
     cognitoSub:   { type: DataTypes.STRING,      allowNull: true },
     isActive:     { type: DataTypes.BOOLEAN,     defaultValue: true },
   }, { tableName: 'workers', underscored: true });

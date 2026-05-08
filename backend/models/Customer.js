@@ -10,6 +10,8 @@ module.exports = (sequelize) => {
     city:         { type: DataTypes.STRING(100), allowNull: true },
     passwordHash: { type: DataTypes.STRING,      allowNull: false },
     avatar:       { type: DataTypes.STRING(10),  defaultValue: '👤' },
+    lat:          { type: DataTypes.FLOAT,       allowNull: true },
+    lng:          { type: DataTypes.FLOAT,       allowNull: true },
     cognitoSub:   { type: DataTypes.STRING,      allowNull: true },
     isActive:     { type: DataTypes.BOOLEAN,     defaultValue: true },
   }, { tableName: 'customers', underscored: true });

@@ -9,10 +9,15 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 <div class="dash-layout">
-
+  <div class="mobile-header">
+    <div class="sidebar-logo">Servi<span>Connect</span></div>
+    <div class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</div>
+  </div>
+  
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">Servi<span>Connect</span></div>
@@ -136,7 +141,16 @@
           </div>
           <div id="trackStats" style="font-size:0.78rem;color:var(--text-dim);border-top:1px solid rgba(255,255,255,0.06);padding-top:10px">
              Experience: <span id="trackExp" style="color:var(--text-soft)">—</span><br>
-             Rating: <span id="trackRating" style="color:var(--gold)">—</span>
+             Rating: <span id="trackRating" style="color:var(--gold)">—</span><br>
+             Vehicle: <span id="trackVehicle" style="color:var(--teal)">—</span>
+          </div>
+          <!-- Real-time Chat -->
+          <div style="margin-top:15px;border-top:1px solid rgba(255,255,255,0.06);padding-top:15px">
+            <div id="chatMessages" style="height:120px;overflow-y:auto;font-size:0.8rem;margin-bottom:10px;padding:5px;display:flex;flex-direction:column;gap:5px"></div>
+            <div style="display:flex;gap:5px">
+              <input type="text" id="chatInput" placeholder="Type a message..." style="flex:1;background:var(--navy-mid);border:none;border-radius:4px;padding:5px 10px;color:white;font-size:0.8rem">
+              <button onclick="sendChatMessage()" style="background:var(--orange);border:none;border-radius:4px;padding:5px 10px;color:white;cursor:pointer">Send</button>
+            </div>
           </div>
         </div>
       </div>
@@ -248,17 +262,17 @@ async function loadDashboard() {
   if (!ok) { showToast('Session expired. Please login again.', 'error'); Auth.logout(); return; }
 
   customerData = data.data;
-  const s = customerData.stats;
+  const s = customerData.stats || {};
 
   document.getElementById('sidebarName').textContent = `${customerData.firstName} ${customerData.lastName}`;
   document.getElementById('greetName').textContent = customerData.firstName;
-  document.getElementById('statTotal').textContent = s.totalBookings;
-  document.getElementById('statCompleted').textContent = s.completed;
-  document.getElementById('statActive').textContent = s.active + s.pending;
-  document.getElementById('statSpent').textContent = formatCurrency(s.totalSpent);
+  document.getElementById('statTotal').textContent = s.totalBookings || 0;
+  document.getElementById('statCompleted').textContent = s.completed || 0;
+  document.getElementById('statActive').textContent = (s.active || 0) + (s.pending || 0);
+  document.getElementById('statSpent').textContent = formatCurrency(s.totalSpent || 0);
 
-  renderRecentBookings(customerData.recentBookings);
-  renderActiveJob(customerData.recentBookings);
+  renderRecentBookings(customerData.recentBookings || []);
+  renderActiveJob(customerData.recentBookings || []);
 }
 
 function renderActiveJob(bookings) {
@@ -445,7 +459,7 @@ async function startTrackingWorker(bookingId) {
       return;
     }
 
-    const { lat, lng, workerName, workerPhone, workerAvatar, workerRating, workerExp } = data;
+    const { lat, lng, workerName, workerPhone, workerAvatar, workerRating, workerExp, vehicleInfo } = data;
     
     // Update Info Box
     document.getElementById('trackName').textContent = workerName;
@@ -454,13 +468,19 @@ async function startTrackingWorker(bookingId) {
     document.getElementById('trackPhone').href = `tel:${workerPhone}`;
     document.getElementById('trackExp').textContent = workerExp || '—';
     document.getElementById('trackRating').textContent = workerRating ? `⭐ ${workerRating}/5` : 'New';
+    document.getElementById('trackVehicle').textContent = vehicleInfo || 'On Foot';
 
     // Handle map/route
     const updateMap = (cLat, cLng) => {
       const wPos = L.latLng(lat, lng);
-      
+      let etaMsg = 'On the way...';
+
       if (cLat && cLng) {
         const cPos = L.latLng(cLat, cLng);
+        const dist = wPos.distanceTo(cPos) / 1000; // km
+        const eta  = Math.round(dist * 3); // Approx 3 mins per km
+        etaMsg = `${eta} mins away (${dist.toFixed(1)} km)`;
+        
         if (!routeControl) {
           routeControl = L.Routing.control({
             waypoints: [wPos, cPos],
@@ -469,7 +489,15 @@ async function startTrackingWorker(bookingId) {
             draggableWaypoints: false,
             fitSelectedRoutes: true,
             show: false,
-            createMarker: () => null // Hide default markers
+            createMarker: (i, wp) => {
+              if (i === 1) return L.marker(wp.latLng, { 
+                icon: L.divIcon({ 
+                  html: `<div style="background:var(--teal);width:14px;height:14px;border-radius:50%;border:2px solid white"></div>`,
+                  className: 'customer-pos-icon' 
+                }) 
+              }).bindPopup('You are here');
+              return null;
+            }
           }).addTo(workerMap);
         } else {
           routeControl.setWaypoints([wPos, cPos]);
@@ -478,11 +506,12 @@ async function startTrackingWorker(bookingId) {
         // Just center on worker if customer location unknown
         workerMap.setView(wPos, 14);
       }
+      document.getElementById('trackStatus').textContent = etaMsg;
 
       if (!trackingMarker) {
         trackingMarker = L.marker(wPos, {
           icon: L.divIcon({
-            html: `<div style="background:var(--orange);width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px var(--orange)"></div>`,
+            html: `<div style="background:var(--orange);width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px var(--orange)"></div>`,
             className: 'tracking-icon'
           })
         }).addTo(workerMap).bindPopup(`<b>${workerName}</b> is on the way!`).openPopup();
@@ -491,18 +520,12 @@ async function startTrackingWorker(bookingId) {
       }
     };
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => updateMap(pos.coords.latitude, pos.coords.longitude),
-        () => updateMap(null, null) // Fallback if blocked
-      );
-    } else {
-      updateMap(null, null);
-    }
+    updateMap(customerData?.lat, customerData?.lng);
   };
 
   fetchTracking();
-  trackingInterval = setInterval(fetchTracking, 10000);
+  joinBookingRoom(bookingId); // Real-time socket updates via 'location_update'
+  trackingInterval = setInterval(fetchTracking, 15000); // Slower fallback polling
 }
 
 function stopTracking() {
@@ -518,6 +541,95 @@ function stopTracking() {
 
 // Init
 loadDashboard();
+
+// ── Real-time Customer Location Tracking ──────────────────────
+let customerWatchId = null;
+function startCustomerTracking() {
+  if (!navigator.geolocation) return;
+  customerWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude, longitude } = pos.coords;
+      CustomerAPI.updateLocation(latitude, longitude);
+      if (customerData) { customerData.lat = latitude; customerData.lng = longitude; }
+    },
+    err => console.error('Customer tracking error:', err),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+startCustomerTracking();
+
+// ── Socket.io Implementation ──────────────────────────────────
+const socket = initSocket();
+
+function joinBookingRoom(bookingId) {
+  if (socket) socket.emit('join_booking', bookingId);
+}
+
+if (socket) {
+  socket.on('worker_accepted', (details) => {
+    showToast(`✅ Your job was accepted by ${details.workerName}!`, 'success');
+    loadDashboard(); // Refresh UI to show worker details
+  });
+
+  socket.on('status_update', (data) => {
+    const statusText = data.status.replace('_', ' ').toUpperCase();
+    showToast(`🔔 Status updated to: ${statusText}`, 'info');
+    
+    if (data.status === 'completed' && data.price) {
+      showToast(`💰 Final Bill Summary: ${formatCurrency(data.price)}`, 'success');
+    }
+    loadDashboard();
+  });
+
+  socket.on('location_update', (data) => {
+    // If we are currently tracking this worker, update marker
+    if (trackingMarker && trackingInterval === null) { // using socket for tracking now
+       const newPos = L.latLng(data.lat, data.lng);
+       trackingMarker.setLatLng(newPos);
+       if (routeControl) {
+         routeControl.setWaypoints([newPos, L.latLng(customerData.lat, customerData.lng)]);
+       }
+    }
+  });
+
+  socket.on('new_message', (data) => {
+    const chatBox = document.getElementById('chatMessages');
+    if (!chatBox) return;
+    const msgEl = document.createElement('div');
+    msgEl.style.padding = '5px 10px';
+    msgEl.style.borderRadius = '4px';
+    msgEl.style.maxWidth = '80%';
+    msgEl.style.alignSelf = data.sender === 'customer' ? 'flex-end' : 'flex-start';
+    msgEl.style.background = data.sender === 'customer' ? 'var(--orange)' : 'var(--navy-mid)';
+    msgEl.style.color = 'white';
+    msgEl.innerHTML = `<div style="font-size:0.6rem;opacity:0.7">${data.sender === 'customer' ? 'You' : 'Worker'}</div><div>${data.text}</div>`;
+    chatBox.appendChild(msgEl);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+}
+
+let activeBookingId = null;
+const originalStartTracking = startTrackingWorker;
+startTrackingWorker = (bookingId) => {
+  activeBookingId = bookingId;
+  const chatBox = document.getElementById('chatMessages');
+  if (chatBox) chatBox.innerHTML = ''; // Clear old chat
+  originalStartTracking(bookingId);
+};
+
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !activeBookingId || !socket) return;
+  
+  socket.emit('send_message', {
+    bookingId: activeBookingId,
+    sender: 'customer',
+    text,
+    timestamp: new Date()
+  });
+  input.value = '';
+}
 </script>
 </body>
 </html>

@@ -38,7 +38,8 @@ async function startServer() {
       console.log('[DB] Models synced (development mode)');
     }
   } catch (err) {
-    console.error('[DB] Connection failed:', err.message);
+    console.error('[DB] ❌ Connection failed!');
+    console.error(err);
     process.exit(1);
   }
 
@@ -78,7 +79,14 @@ async function startServer() {
   app.use(errorHandler);
 
   const PORT = config.port;
-  app.listen(PORT, () => {
+  const http = require('http');
+  const server = http.createServer(app);
+
+  // ── Init Socket.io ───────────────────────────────────────────
+  const { init: initSocket } = require('./services/socketService');
+  initSocket(server);
+
+  server.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════╗
 ║      ServiConnect API Server v2.0        ║
@@ -88,7 +96,7 @@ async function startServer() {
     `);
   });
 
-  return app;
+  return server;
 }
 
 startServer().catch(err => {

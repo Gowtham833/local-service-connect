@@ -22,8 +22,14 @@ router.get('/me', async (req, res, next) => {
 
     const recentJobs = await Promise.all(
       jobs.slice(0, 10).map(async (j) => {
-        const customer = await db.Customer.findByPk(j.customerId, { attributes: ['firstName', 'lastName', 'phone'] });
-        return { ...j.toJSON(), customerName: customer ? `${customer.firstName} ${customer.lastName}` : 'N/A', customerPhone: customer?.phone };
+        const customer = await db.Customer.findByPk(j.customerId, { attributes: ['firstName', 'lastName', 'phone', 'lat', 'lng'] });
+        return { 
+          ...j.toJSON(), 
+          customerName: customer ? `${customer.firstName} ${customer.lastName}` : 'N/A', 
+          customerPhone: customer?.phone,
+          customerLat: customer?.lat,
+          customerLng: customer?.lng
+        };
       })
     );
 
@@ -81,10 +87,56 @@ router.get('/open-jobs', async (req, res, next) => {
 
 // ── PATCH /api/worker/jobs/:id/accept ────────────────────────
 router.patch('/jobs/:id/accept', async (req, res, next) => {
+  const transaction = await db.sequelize.transaction();
   try {
-    const booking = await db.Booking.findOne({ where: { id: req.params.id, status: 'open' } });
-    if (!booking) return res.status(404).json({ success: false, message: 'Job not found or already taken.' });
-    await booking.update({ workerId: req.user.id, status: 'active', acceptedAt: new Date() });
+    const booking = await db.Booking.findOne({ 
+      where: { id: req.params.id, status: 'open' },
+      lock: true,
+      transaction 
+    });
+
+    if (!booking) {
+      await transaction.rollback();
+      return res.status(404).json({ success: false, message: 'Job not found or already taken.' });
+    }
+
+    await booking.update({ 
+      workerId: req.user.id, 
+      status: 'accepted', 
+      acceptedAt: new Date() 
+    }, { transaction });
+
+    await transaction.commit();
+
+    const worker = await db.Worker.findByPk(req.user.id, { attributes: ['firstName', 'lastName', 'phone', 'rating', 'avatar', 'experience'] });
+    const { notifyJobAccepted } = require('../services/socketService');
+    notifyJobAccepted(booking.id, {
+      workerId: worker.id,
+      workerName: `${worker.firstName} ${worker.lastName}`,
+      workerPhone: worker.phone,
+      workerRating: worker.rating,
+      workerAvatar: worker.avatar,
+      workerExp: worker.experience
+    });
+
+    res.json({ success: true, data: booking });
+  } catch (err) {
+    await transaction.rollback();
+    next(err);
+  }
+});
+
+// ── PATCH /api/worker/jobs/:id/start ─────────────────────────
+router.patch('/jobs/:id/start', async (req, res, next) => {
+  try {
+    const booking = await db.Booking.findOne({ where: { id: req.params.id, workerId: req.user.id } });
+    if (!booking) return res.status(404).json({ success: false, message: 'Job not found.' });
+    
+    await booking.update({ status: 'in_progress' });
+    
+    const { notifyStatusUpdate } = require('../services/socketService');
+    notifyStatusUpdate(booking.id, 'in_progress');
+
     res.json({ success: true, data: booking });
   } catch (err) { next(err); }
 });
@@ -94,8 +146,13 @@ router.patch('/jobs/:id/complete', async (req, res, next) => {
   try {
     const booking = await db.Booking.findOne({ where: { id: req.params.id, workerId: req.user.id } });
     if (!booking) return res.status(404).json({ success: false, message: 'Job not found.' });
-    if (booking.status !== 'active') return res.status(400).json({ success: false, message: 'Job is not active.' });
-    await booking.update({ status: 'completed', completedAt: new Date(), price: req.body.price || 0 });
+    
+    const price = parseFloat(req.body.price) || 0;
+    await booking.update({ status: 'completed', completedAt: new Date(), price });
+    
+    const { notifyStatusUpdate } = require('../services/socketService');
+    notifyStatusUpdate(booking.id, 'completed', { price });
+
     res.json({ success: true, data: booking });
   } catch (err) { next(err); }
 });
