@@ -18,31 +18,37 @@ router.get('/me', async (req, res, next) => {
     if (!customer) return res.status(404).json({ success: false, message: 'Customer not found.' });
 
     const bookings  = customer.bookings || [];
-    const completed = bookings.filter(b => b.status === 'completed');
-    const totalSpent = completed.reduce((s, b) => s + (b.price || 0), 0);
+
+    // stats calculation based on the raw instances
+    const stats = {
+      totalBookings: bookings.length,
+      completed: bookings.filter(b => b.status === 'completed').length,
+      accepted:  bookings.filter(b => b.status === 'accepted').length,
+      in_progress: bookings.filter(b => b.status === 'in_progress').length,
+      pending:   bookings.filter(b => b.status === 'pending' || b.status === 'open').length,
+      totalSpent: bookings.reduce((sum, b) => sum + (b.price || 0), 0)
+    };
 
     res.json({
-      success: true, data: {
+      success: true,
+      data: {
         ...customer.toJSON(),
-        stats: { 
-          totalBookings: bookings.length, 
-          completed: completed.length, 
-          active: bookings.filter(b => b.status === 'active').length, 
-          pending: bookings.filter(b => b.status === 'pending' || b.status === 'open').length,
-          totalSpent 
-        },
+        stats,
         recentBookings: [...bookings]
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .slice(0, 5)
           .map(b => {
-            const json = b.toJSON();
+            // b is already an instance, but if customer.toJSON() was called earlier, 
+            // the nested objects might have been converted. 
+            // Let's use a safe conversion.
+            const json = typeof b.toJSON === 'function' ? b.toJSON() : b;
             if (json.worker) {
               json.workerName = `${json.worker.firstName} ${json.worker.lastName}`;
               json.workerPhone = json.worker.phone;
               json.workerRating = json.worker.rating;
             }
             return json;
-          }),
+          })
       }
     });
   } catch (err) { next(err); }
@@ -85,7 +91,7 @@ router.get('/workers', async (req, res, next) => {
 // ── POST /api/customer/bookings ───────────────────────────────
 router.post('/bookings', async (req, res, next) => {
   try {
-    const { service, description, address, workerId } = req.body;
+    const { service, description, address, workerId, lat, lng } = req.body;
     if (!service || !address) return res.status(400).json({ success: false, message: 'Service and address are required.' });
 
     // Get AI suggestions in parallel
@@ -101,6 +107,7 @@ router.post('/bookings', async (req, res, next) => {
       customerId: req.user.id,
       workerId:   workerId || null,
       service, description, address,
+      lat, lng,
       status: workerId ? 'pending' : 'open',
       aiSuggestedPrice:   priceEst.suggested,
       aiMatchedWorkerIds: matchedIds.slice(0, 5),

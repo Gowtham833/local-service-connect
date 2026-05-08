@@ -432,7 +432,14 @@ async function postBooking() {
   const address  = document.getElementById('bookAddress').value;
   if (!service || !address) { showToast('Please fill in service and address.', 'error'); return; }
 
-  const { ok, data } = await CustomerAPI.postBooking({ service, description, address });
+  const payload = { 
+    service, 
+    description, 
+    address,
+    lat: customerData?.lat,
+    lng: customerData?.lng
+  };
+  const { ok, data } = await CustomerAPI.postBooking(payload);
   if (ok) {
     showToast('✅ Request posted! Workers have been notified.');
     document.getElementById('bookService').value = '';

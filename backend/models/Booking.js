@@ -18,6 +18,8 @@ module.exports = (sequelize) => {
     aiJobSummary:        { type: DataTypes.TEXT,  allowNull: true },
     acceptedAt:          { type: DataTypes.DATE,  allowNull: true },
     completedAt:         { type: DataTypes.DATE,  allowNull: true },
+    lat:                 { type: DataTypes.FLOAT, allowNull: true },
+    lng:                 { type: DataTypes.FLOAT, allowNull: true },
   }, { tableName: 'bookings', underscored: true });
 
   Booking.associate = (models) => {

@@ -34,17 +34,20 @@ router.get('/me', async (req, res, next) => {
     );
 
     res.json({
-      success: true, data: {
+      success: true,
+      data: {
         ...worker.toJSON(),
         stats: {
           totalJobs: completed.length,
-          activeJobs: jobs.filter(j => j.status === 'active').length,
+          activeJobs: active.length,
           totalEarnings: completed.reduce((s, j) => s + (j.price || 0), 0),
           earningsThisMonth: thisMonth.reduce((s, j) => s + (j.price || 0), 0),
           jobsThisMonth: thisMonth.length,
           avgRating: worker.rating,
         },
-        recentJobs,
+        recentJobs: [...recent]
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .map(b => typeof b.toJSON === 'function' ? b.toJSON() : b)
       }
     });
   } catch (err) { next(err); }
