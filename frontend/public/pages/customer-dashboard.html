@@ -599,7 +599,7 @@ function startCustomerTracking() {
 startCustomerTracking();
 
 // ── Socket.io Implementation ──────────────────────────────────
-const socket = initSocket();
+socket = initSocket();
 
 function joinBookingRoom(bookingId) {
   if (socket) socket.emit('join_booking', bookingId);

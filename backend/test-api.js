@@ -3,7 +3,7 @@ async function test() {
     const loginRes = await fetch('http://localhost:5000/api/auth/customer/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '1234567890', password: 'password' })
+      body: JSON.stringify({ phone: '9999999999', password: 'password123' })
     });
     
     const loginData = await loginRes.json();

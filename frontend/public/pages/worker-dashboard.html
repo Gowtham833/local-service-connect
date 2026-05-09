@@ -484,7 +484,7 @@ function renderProfile() {
 loadDashboard();
 
 // ── Socket.io Implementation ──────────────────────────────────
-const socket = initSocket();
+socket = initSocket();
 if (socket) {
   socket.on('connect', () => {
     socket.emit('join_workers');
