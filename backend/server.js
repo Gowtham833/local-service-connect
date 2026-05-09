@@ -45,6 +45,9 @@ async function startServer() {
 
   const app = express();
 
+  // ── Trust Nginx Reverse Proxy ─────────────────────────────────
+  app.set('trust proxy', 1);
+
   // ── Security + Logging Middleware ─────────────────────────────
   securityMiddleware(app, config);
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
