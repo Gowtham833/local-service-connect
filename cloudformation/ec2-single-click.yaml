@@ -219,6 +219,10 @@ Resources:
           #!/bin/bash
           cd /home/ec2-user/app/backend
           npm install
+          
+          # Run migrations to ensure DB is up to date
+          npx sequelize-cli db:migrate --env production || echo "Migration failed or already applied"
+
           pm2 delete serviconnect 2>/dev/null || true
           pm2 start server.js --name serviconnect
           pm2 save
