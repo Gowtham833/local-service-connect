@@ -33,21 +33,21 @@ router.get('/me', async (req, res, next) => {
       })
     );
 
+    const activeJobs = jobs.filter(j => ['accepted', 'in_progress', 'pending'].includes(j.status));
+
     res.json({
       success: true,
       data: {
         ...worker.toJSON(),
         stats: {
           totalJobs: completed.length,
-          activeJobs: active.length,
+          activeJobs: activeJobs.length,
           totalEarnings: completed.reduce((s, j) => s + (j.price || 0), 0),
           earningsThisMonth: thisMonth.reduce((s, j) => s + (j.price || 0), 0),
           jobsThisMonth: thisMonth.length,
           avgRating: worker.rating,
         },
-        recentJobs: [...recent]
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .map(b => typeof b.toJSON === 'function' ? b.toJSON() : b)
+        recentJobs: recentJobs
       }
     });
   } catch (err) { next(err); }
