@@ -255,24 +255,6 @@
       </div>
     </div>
 
-    <div class="form-group">
-      <label>Live Selfie *</label>
-      <div id="selfieSection">
-        <div class="camera-container" id="cameraBox" style="display:none">
-          <video id="selfieVideo" autoplay playsinline></video>
-          <canvas id="selfieCanvas" style="display:none"></canvas>
-        </div>
-        <div id="selfiePreviewBox" style="display:none;text-align:center">
-          <img id="selfiePreviewImg" class="selfie-preview" alt="Selfie">
-        </div>
-        <div class="camera-controls">
-          <button type="button" class="camera-btn camera-btn-capture" id="cameraStartBtn" onclick="startSelfieCapture()">📷 Open Camera</button>
-          <button type="button" class="camera-btn camera-btn-capture" id="captureBtn" onclick="captureSelfie()" style="display:none">📸 Capture</button>
-          <button type="button" class="camera-btn camera-btn-retake" id="retakeBtn" onclick="retakeSelfie()" style="display:none">🔄 Retake</button>
-        </div>
-      </div>
-    </div>
-
     <button class="submit-btn" id="signupBtn" onclick="doSignup()">Create Worker Account →</button>
     <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);text-align:center;margin-top:16px">🔒 Your data is fully encrypted</p>
   </div>
@@ -331,8 +313,6 @@
 <script>
 if (Auth.isLoggedIn()) Auth.redirectToDashboard();
 
-let cameraStream = null;
-let selfieBase64 = null;
 let aadhaarFrontBase64 = null;
 let aadhaarBackBase64 = null;
 let resetTokenVal = null;
@@ -346,39 +326,6 @@ function showTab(tab) {
 }
 function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
 function toggleSkill(el) { el.classList.toggle('selected'); }
-
-// ── Camera / Selfie ───────────────────────────────
-async function startSelfieCapture() {
-  const video = document.getElementById('selfieVideo');
-  const box = document.getElementById('cameraBox');
-  box.style.display = 'block';
-  document.getElementById('cameraStartBtn').style.display = 'none';
-  document.getElementById('captureBtn').style.display = 'inline-block';
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user', width:480, height:360 } });
-    video.srcObject = cameraStream;
-    video.play();
-  } catch(e) { showToast('Camera access denied. Please allow camera.', 'error'); }
-}
-function captureSelfie() {
-  const video = document.getElementById('selfieVideo');
-  const canvas = document.getElementById('selfieCanvas');
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  selfieBase64 = canvas.toDataURL('image/jpeg', 0.85);
-  document.getElementById('selfiePreviewImg').src = selfieBase64;
-  document.getElementById('selfiePreviewBox').style.display = 'block';
-  document.getElementById('cameraBox').style.display = 'none';
-  document.getElementById('captureBtn').style.display = 'none';
-  document.getElementById('retakeBtn').style.display = 'inline-block';
-  if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-}
-function retakeSelfie() {
-  selfieBase64 = null;
-  document.getElementById('selfiePreviewBox').style.display = 'none';
-  document.getElementById('retakeBtn').style.display = 'none';
-  startSelfieCapture();
-}
 
 // ── Aadhaar Upload ────────────────────────────────
 async function previewAadhaar(input, side) {
@@ -538,7 +485,7 @@ async function doSignup() {
     experience:document.getElementById('regExp').value,
     password:document.getElementById('regPass').value,
     aadhaarNumber:document.getElementById('regAadhaar').value.trim(),
-    liveSelfie:selfieBase64||null,
+    liveSelfie:null,
     aadhaarFront:aadhaarFrontBase64||null,
     aadhaarBack:aadhaarBackBase64||null,
     otp: otp
