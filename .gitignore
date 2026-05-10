@@ -48,3 +48,16 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Temp/Draft Scripts
+fix_nginx.py
+generate_ppt.py
+Local_Service_Connect_Presentation.pptx
+**/db-check.js
+**/query-check.js
+**/test-api.js
