@@ -67,10 +67,12 @@ const API = {
 
 // ── Auth API ──────────────────────────────────────────────────
 const AuthAPI = {
-  customerLogin:    (phone, password) => API.post('/api/auth/customer/login', { phone, password }),
+  sendLoginOTP:         (phone, role)      => API.post('/api/auth/login/send-otp', { phone, role }),
+  sendRegistrationOTP:  (phone, role)      => API.post('/api/auth/register/send-otp', { phone, role }),
+  customerLogin:        (phone, otp)       => API.post('/api/auth/customer/login', { phone, otp }),
   customerRegister: (payload)         => API.post('/api/auth/customer/register', payload),
   customerResetPassword: (phone, newPassword) => API.post('/api/auth/customer/reset-password', { phone, newPassword }),
-  workerLogin:      (phone, password) => API.post('/api/auth/worker/login', { phone, password }),
+  workerLogin:      (phone, otp)      => API.post('/api/auth/worker/login', { phone, otp }),
   workerRegister:   (payload)         => API.post('/api/auth/worker/register', payload),
   workerResetPassword: (phone, newPassword) => API.post('/api/auth/worker/reset-password', { phone, newPassword }),
   adminLogin:       (username, password) => API.post('/api/auth/admin/login', { username, password }),
