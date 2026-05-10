@@ -97,6 +97,15 @@
           <label class="form-label">Your Address</label>
           <input class="form-input" id="bookAddress" type="text" placeholder="Flat 4B, Banjara Hills, Hyderabad">
         </div>
+        <div class="form-group">
+          <label class="form-label">📸 Upload Issue Photo(s) <span style="color:var(--orange)">*Required</span></label>
+          <div class="photo-upload-area" onclick="document.getElementById('issuePhotoInput').click()">
+            <span class="upload-icon">📷</span>
+            <div class="upload-text">Click to upload photos of the issue<br><strong>Max 3 photos</strong> · JPG, PNG</div>
+            <input type="file" id="issuePhotoInput" accept="image/*" multiple style="display:none" onchange="handleIssuePhotos(this)">
+          </div>
+          <div class="photo-preview-grid" id="issuePhotoPreview"></div>
+        </div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px" onclick="postBooking()">🔔 Post Request</button>
       </div>
     </div>
@@ -290,21 +299,26 @@ function renderActiveJob(bookings) {
   const active = (bookings || []).filter(b => b.status === 'accepted' || b.status === 'in_progress');
   const card = document.getElementById('activeJobCard');
   const content = document.getElementById('activeJobContent');
-  
-  if (!active.length) {
-    card.style.display = 'none';
-    return;
-  }
-  
+  if (!active.length) { card.style.display = 'none'; return; }
   card.style.display = 'block';
   const j = active[0];
+  const workerPhotoHtml = j.workerPhoto
+    ? `<img src="${j.workerPhoto}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid var(--teal)" alt="Worker">`
+    : `<div style="width:70px;height:70px;border-radius:50%;background:var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid var(--teal)">${j.workerAvatar||'👷'}</div>`;
+  const verifiedBadge = j.workerVerified ? '<span class="verification-badge verification-verified">✅ Verified</span>' : '<span class="verification-badge verification-pending">⏳ Pending</span>';
   content.innerHTML = `
+    <div class="safety-alert">
+      <div class="safety-alert-title">🛡️ Safety Verification</div>
+      <div class="safety-alert-text">Please verify that the person who arrived matches the photo shown below. Your safety and privacy are your responsibility.</div>
+    </div>
     <div style="display:flex;gap:20px;align-items:center">
-      <div style="width:60px;height:60px;border-radius:50%;background:var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:2px solid var(--teal)">👷</div>
+      ${workerPhotoHtml}
       <div style="flex:1">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;margin-bottom:4px">${j.workerName}</div>
-        <div style="font-size:0.85rem;color:var(--text-soft);margin-bottom:8px">🔧 ${j.service} &nbsp;·&nbsp; ⭐ ${j.workerRating || 'New'}</div>
-        <div style="display:flex;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><span style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem">${j.workerName}</span>${verifiedBadge}</div>
+        <div style="font-size:0.85rem;color:var(--text-soft);margin-bottom:4px">🔧 ${j.service} · ⭐ ${j.workerRating || 'New'}</div>
+        <div style="font-size:0.85rem;margin-bottom:4px"><strong style="color:var(--teal)">📞 ${j.workerPhone || 'N/A'}</strong></div>
+        <div style="font-size:0.8rem;color:var(--text-dim)">${j.workerVehicle ? '🚗 '+j.workerVehicle : ''} ${j.workerExperience ? '· 🏅 '+j.workerExperience : ''}</div>
+        <div style="display:flex;gap:10px;margin-top:10px">
            <button class="btn btn-teal btn-sm" onclick="startTrackingWorker('${j.id}')">📍 Track Live</button>
            <a href="tel:${j.workerPhone}" class="btn btn-ghost btn-sm">📞 Call</a>
         </div>
@@ -327,7 +341,7 @@ function renderRecentBookings(bookings) {
         ${bookings.map(b => `
           <tr>
             <td>${b.service}</td>
-            <td>${b.workerName || '—'}</td>
+            <td>${b.workerName ? `<div>${b.workerName}</div><div style="font-size:0.75rem;color:var(--teal);margin-top:2px;font-weight:600">📞 ${b.workerPhone || 'N/A'}</div>` : '—'}</td>
             <td>${formatDate(b.createdAt)}</td>
             <td>${b.price ? formatCurrency(b.price) : '—'}</td>
             <td>${statusBadge(b.status)}</td>
@@ -369,7 +383,7 @@ async function loadAllBookings() {
           <tr>
             <td>${formatDate(b.createdAt)}</td>
             <td><div style="font-weight:600">${b.service}</div><div style="font-size:0.75rem;color:var(--text-dim)">${b.id.substring(0,8)}</div></td>
-            <td>${b.workerName || '—'}</td>
+            <td>${b.workerName ? `<div>${b.workerName}</div><div style="font-size:0.75rem;color:var(--teal);margin-top:2px;font-weight:600">📞 ${b.workerPhone || 'N/A'}</div>` : '—'}</td>
             <td>${statusBadge(b.status)}</td>
             <td>${formatCurrency(b.price)}</td>
             <td>${b.status === 'completed' && !b.rating ? `<button class="btn btn-ghost btn-sm" onclick="openRateModal('${b.id}')">⭐ Rate</button>` : b.rating ? `⭐ ${b.rating}/5` : '—'}</td>
@@ -426,25 +440,38 @@ function quickBook(workerId, service) {
   document.getElementById('page-book').scrollIntoView();
 }
 
+let issuePhotosBase64 = [];
+async function handleIssuePhotos(input) {
+  const files = Array.from(input.files).slice(0, 3);
+  issuePhotosBase64 = [];
+  const preview = document.getElementById('issuePhotoPreview');
+  preview.innerHTML = '';
+  for (const file of files) {
+    const b64 = await fileToBase64(file);
+    issuePhotosBase64.push(b64);
+    preview.innerHTML += `<div class="photo-preview-item"><img src="${b64}"><button class="remove-photo" onclick="removeIssuePhoto(${issuePhotosBase64.length-1})">×</button></div>`;
+  }
+}
+function removeIssuePhoto(idx) {
+  issuePhotosBase64.splice(idx, 1);
+  const preview = document.getElementById('issuePhotoPreview');
+  preview.innerHTML = issuePhotosBase64.map((b,i) => `<div class="photo-preview-item"><img src="${b}"><button class="remove-photo" onclick="removeIssuePhoto(${i})">×</button></div>`).join('');
+}
 async function postBooking() {
   const service  = document.getElementById('bookService').value;
   const description = document.getElementById('bookDesc').value;
   const address  = document.getElementById('bookAddress').value;
   if (!service || !address) { showToast('Please fill in service and address.', 'error'); return; }
-
-  const payload = { 
-    service, 
-    description, 
-    address,
-    lat: customerData?.lat,
-    lng: customerData?.lng
-  };
+  if (!issuePhotosBase64.length) { showToast('📸 Please upload at least one photo of the issue.', 'error'); return; }
+  const payload = { service, description, address, lat: customerData?.lat, lng: customerData?.lng, issuePhotos: issuePhotosBase64 };
   const { ok, data } = await CustomerAPI.postBooking(payload);
   if (ok) {
     showToast('✅ Request posted! Workers have been notified.');
     document.getElementById('bookService').value = '';
     document.getElementById('bookDesc').value = '';
     document.getElementById('bookAddress').value = '';
+    issuePhotosBase64 = [];
+    document.getElementById('issuePhotoPreview').innerHTML = '';
     showPage('bookings');
   } else {
     showToast(data.message || 'Failed to post request.', 'error');
@@ -617,6 +644,7 @@ if (socket) {
     
     if (data.status === 'completed' && data.price) {
       showToast(`💰 Final Bill Summary: ${formatCurrency(data.price)}`, 'success');
+      setTimeout(() => openRateModal(data.bookingId), 1500);
     }
     loadDashboard();
   });

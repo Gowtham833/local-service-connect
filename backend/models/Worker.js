@@ -8,7 +8,10 @@ module.exports = (sequelize) => {
     email:        { type: DataTypes.STRING(255), allowNull: true, unique: true },
     phone:        { type: DataTypes.STRING(20),  allowNull: false, unique: true },
     city:         { type: DataTypes.STRING(100), allowNull: true },
-    skills:       { type: DataTypes.ARRAY(DataTypes.STRING), defaultValue: [] },
+    skills:       { 
+      type: sequelize.getDialect() === 'sqlite' ? DataTypes.JSON : DataTypes.ARRAY(DataTypes.STRING), 
+      defaultValue: [] 
+    },
     experience:   { type: DataTypes.STRING(500), allowNull: true },
     passwordHash: { type: DataTypes.STRING,      allowNull: false },
     avatar:       { type: DataTypes.STRING(10),  defaultValue: '👷' },
@@ -23,6 +26,19 @@ module.exports = (sequelize) => {
     vehicleInfo:  { type: DataTypes.STRING(200), allowNull: true },
     cognitoSub:   { type: DataTypes.STRING,      allowNull: true },
     isActive:     { type: DataTypes.BOOLEAN,     defaultValue: true },
+
+    // ── Identity Verification Fields ──────────────────────────
+    aadhaarNumber:        { type: DataTypes.STRING(20),  allowNull: true },
+    aadhaarFrontImageUrl: { type: DataTypes.STRING(500), allowNull: true },
+    aadhaarBackImageUrl:  { type: DataTypes.STRING(500), allowNull: true },
+    liveSelfieImageUrl:   { type: DataTypes.STRING(500), allowNull: true },
+    profilePhotoUrl:      { type: DataTypes.STRING(500), allowNull: true },
+    verificationStatus:   { 
+      type: DataTypes.ENUM('pending', 'verified', 'rejected'),
+      defaultValue: 'pending'
+    },
+    faceMatchConfidence:  { type: DataTypes.FLOAT, allowNull: true },
+    verificationNotes:    { type: DataTypes.TEXT,  allowNull: true },
   }, { tableName: 'workers', underscored: true });
 
   Worker.associate = (models) => {

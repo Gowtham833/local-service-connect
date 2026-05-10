@@ -7,7 +7,7 @@
  * DO NOT hardcode real API URLs or IDs here.
  */
 window.__SERVICONNECT_CONFIG__ = window.__SERVICONNECT_CONFIG__ || {
-  API_BASE_URL: 'http://3.211.231.17',
+  API_BASE_URL: 'http://localhost:5000',
   COGNITO_USER_POOL_ID: '',
   COGNITO_CLIENT_ID: '',
   AWS_REGION: 'us-east-1',

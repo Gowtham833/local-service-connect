@@ -14,12 +14,20 @@ module.exports = (sequelize) => {
     },
     price:               { type: DataTypes.FLOAT, allowNull: true },
     aiSuggestedPrice:    { type: DataTypes.FLOAT, allowNull: true },
-    aiMatchedWorkerIds:  { type: DataTypes.ARRAY(DataTypes.UUID), defaultValue: [] },
+    aiMatchedWorkerIds:  { 
+      type: sequelize.getDialect() === 'sqlite' ? DataTypes.JSON : DataTypes.ARRAY(DataTypes.UUID), 
+      defaultValue: [] 
+    },
     aiJobSummary:        { type: DataTypes.TEXT,  allowNull: true },
     acceptedAt:          { type: DataTypes.DATE,  allowNull: true },
     completedAt:         { type: DataTypes.DATE,  allowNull: true },
     lat:                 { type: DataTypes.FLOAT, allowNull: true },
     lng:                 { type: DataTypes.FLOAT, allowNull: true },
+
+    // ── Photo Workflow Fields ─────────────────────────────────
+    issuePhotoUrls:      { type: DataTypes.JSON,  defaultValue: [] },      // Customer uploads before booking
+    completionPhotoUrls: { type: DataTypes.JSON,  defaultValue: [] },      // Worker uploads after job
+    completionNotes:     { type: DataTypes.TEXT,   allowNull: true },       // Worker notes on completion
   }, { tableName: 'bookings', underscored: true });
 
   Booking.associate = (models) => {

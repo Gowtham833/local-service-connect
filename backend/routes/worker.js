@@ -3,13 +3,16 @@ const router  = express.Router();
 const { Op }  = require('sequelize');
 const { db }  = require('../models/index');
 const { protect, authorize } = require('../middleware/auth');
+const { saveMultipleBase64Images, maskAadhaar } = require('../services/uploadService');
 
 router.use(protect, authorize('worker'));
 
 // ── GET /api/worker/me ────────────────────────────────────────
 router.get('/me', async (req, res, next) => {
   try {
-    const worker = await db.Worker.findByPk(req.user.id, { attributes: { exclude: ['passwordHash', 'cognitoSub'] } });
+    const worker = await db.Worker.findByPk(req.user.id, { 
+      attributes: { exclude: ['passwordHash', 'cognitoSub', 'aadhaarFrontImageUrl', 'aadhaarBackImageUrl'] }
+    });
     if (!worker) return res.status(404).json({ success: false, message: 'Worker not found.' });
 
     const jobs      = await db.Booking.findAll({ where: { workerId: req.user.id }, order: [['createdAt', 'DESC']] });
@@ -35,10 +38,17 @@ router.get('/me', async (req, res, next) => {
 
     const activeJobs = jobs.filter(j => ['accepted', 'in_progress', 'pending'].includes(j.status));
 
+    const workerJson = worker.toJSON();
+    // Mask Aadhaar number for response
+    if (workerJson.aadhaarNumber) {
+      workerJson.aadhaarNumberMasked = maskAadhaar(workerJson.aadhaarNumber);
+      delete workerJson.aadhaarNumber;
+    }
+
     res.json({
       success: true,
       data: {
-        ...worker.toJSON(),
+        ...workerJson,
         stats: {
           totalJobs: completed.length,
           activeJobs: activeJobs.length,
@@ -111,7 +121,7 @@ router.patch('/jobs/:id/accept', async (req, res, next) => {
 
     await transaction.commit();
 
-    const worker = await db.Worker.findByPk(req.user.id, { attributes: ['firstName', 'lastName', 'phone', 'rating', 'avatar', 'experience'] });
+    const worker = await db.Worker.findByPk(req.user.id, { attributes: ['firstName', 'lastName', 'phone', 'rating', 'avatar', 'experience', 'profilePhotoUrl', 'liveSelfieImageUrl', 'isVerified', 'vehicleInfo'] });
     const { notifyJobAccepted } = require('../services/socketService');
     notifyJobAccepted(booking.id, {
       workerId: worker.id,
@@ -119,7 +129,10 @@ router.patch('/jobs/:id/accept', async (req, res, next) => {
       workerPhone: worker.phone,
       workerRating: worker.rating,
       workerAvatar: worker.avatar,
-      workerExp: worker.experience
+      workerExp: worker.experience,
+      workerPhoto: worker.profilePhotoUrl || worker.liveSelfieImageUrl,
+      workerVerified: worker.isVerified,
+      vehicleInfo: worker.vehicleInfo,
     });
 
     res.json({ success: true, data: booking });
@@ -149,14 +162,55 @@ router.patch('/jobs/:id/complete', async (req, res, next) => {
   try {
     const booking = await db.Booking.findOne({ where: { id: req.params.id, workerId: req.user.id } });
     if (!booking) return res.status(404).json({ success: false, message: 'Job not found.' });
+
+    const { completionPhotos, completionNotes } = req.body;
+
+    // Require at least one completion photo
+    if (!completionPhotos || !Array.isArray(completionPhotos) || completionPhotos.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one completion photo is required. Please upload a photo of the completed work.' });
+    }
+
+    if (completionPhotos.length > 3) {
+      return res.status(400).json({ success: false, message: 'Maximum 3 completion photos allowed.' });
+    }
+
+    // Save completion photos
+    const completionPhotoUrls = saveMultipleBase64Images(completionPhotos, 'completions', req.user.id.substring(0, 8));
     
     const price = parseFloat(req.body.price) || 0;
-    await booking.update({ status: 'completed', completedAt: new Date(), price });
+    await booking.update({ 
+      status: 'completed', 
+      completedAt: new Date(), 
+      price,
+      completionPhotoUrls,
+      completionNotes: completionNotes || null,
+    });
     
     const { notifyStatusUpdate } = require('../services/socketService');
     notifyStatusUpdate(booking.id, 'completed', { price });
 
     res.json({ success: true, data: booking });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/worker/verification-status ─────────────────────
+router.get('/verification-status', async (req, res, next) => {
+  try {
+    const worker = await db.Worker.findByPk(req.user.id, {
+      attributes: ['verificationStatus', 'isVerified', 'faceMatchConfidence', 'verificationNotes', 'aadhaarNumber']
+    });
+    if (!worker) return res.status(404).json({ success: false, message: 'Worker not found.' });
+
+    res.json({
+      success: true,
+      data: {
+        verificationStatus: worker.verificationStatus,
+        isVerified: worker.isVerified,
+        faceMatchConfidence: worker.faceMatchConfidence,
+        aadhaarNumberMasked: maskAadhaar(worker.aadhaarNumber),
+        notes: worker.verificationNotes,
+      }
+    });
   } catch (err) { next(err); }
 });
 

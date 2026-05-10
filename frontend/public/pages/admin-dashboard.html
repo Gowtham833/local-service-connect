@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — ServiConnect</title>
+<link rel="stylesheet" href="/css/shared.css">
+</head>
+<body>
+<div class="dash-layout">
+  <div class="mobile-header">
+    <div class="sidebar-logo">Servi<span>Connect</span></div>
+    <div class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</div>
+  </div>
+  <aside class="sidebar">
+    <div class="sidebar-logo">Servi<span>Connect</span></div>
+    <div class="sidebar-user">
+      <div class="user-avatar" style="background:rgba(255,92,26,0.15);border-color:var(--orange)">🛡️</div>
+      <div class="user-name">Admin Panel</div>
+      <div class="user-role">Platform Administration</div>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="showPage('overview')"><span class="nav-icon">📊</span> Overview</div>
+      <div class="nav-item" onclick="showPage('workers')"><span class="nav-icon">👷</span> Workers</div>
+      <div class="nav-item" onclick="showPage('bookings')"><span class="nav-icon">📋</span> Bookings</div>
+    </nav>
+    <div class="sidebar-footer"><div class="logout-btn" onclick="Auth.logout()">🚪 Logout</div></div>
+  </aside>
+
+  <main class="main-content">
+    <!-- OVERVIEW -->
+    <div id="page-overview">
+      <div class="page-header"><div><div class="page-title">Platform Overview</div><div class="page-subtitle">Real-time stats and worker verification queue</div></div></div>
+      <div class="stats-grid" id="adminStats"></div>
+      <div class="card"><div class="card-title">⏳ Pending Worker Verifications</div><div id="pendingWorkersList"><div class="loader"><div class="spinner"></div></div></div></div>
+    </div>
+
+    <!-- WORKERS -->
+    <div id="page-workers" style="display:none">
+      <div class="page-header"><div><div class="page-title">Worker Management</div><div class="page-subtitle">Review, verify, and manage workers</div></div>
+        <div style="display:flex;gap:10px">
+          <select class="form-select" id="workerFilter" onchange="loadWorkers()" style="width:160px;padding:8px 14px"><option value="">All Workers</option><option value="pending">Pending</option><option value="verified">Verified</option><option value="rejected">Rejected</option></select>
+        </div>
+      </div>
+      <div id="workersList"><div class="loader"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- BOOKINGS -->
+    <div id="page-bookings" style="display:none">
+      <div class="page-header"><div><div class="page-title">Booking Monitor</div><div class="page-subtitle">All bookings with issue and completion photos</div></div>
+        <select class="form-select" id="bookingFilter" onchange="loadBookings()" style="width:160px;padding:8px 14px"><option value="">All Statuses</option><option value="open">Open</option><option value="accepted">Accepted</option><option value="in_progress">In Progress</option><option value="completed">Completed</option></select>
+      </div>
+      <div id="bookingsList"><div class="loader"><div class="spinner"></div></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- WORKER DETAIL MODAL -->
+<div class="modal-overlay" id="workerDetailModal">
+  <div class="modal" style="max-width:600px;max-height:85vh;overflow-y:auto">
+    <div class="modal-title" id="workerDetailTitle">Worker Details</div>
+    <div id="workerDetailContent"></div>
+    <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:16px" onclick="closeModal('workerDetailModal')">Close</button>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightboxOverlay" class="lightbox-overlay" style="display:none" onclick="this.style.display='none'">
+  <img id="lightboxImg" src="" alt="Full size">
+</div>
+
+<script src="/js/config.js?v=2"></script>
+<script src="/js/api.js"></script>
+<script>
+if (!Auth.requireAuth('admin')) throw new Error('Not authorized');
+
+const pages = ['overview','workers','bookings'];
+function showPage(name) {
+  pages.forEach(p => document.getElementById(`page-${p}`).style.display = p===name?'block':'none');
+  document.querySelectorAll('.nav-item').forEach((el,i) => el.classList.toggle('active', pages[i]===name));
+  if (name==='workers') loadWorkers();
+  if (name==='bookings') loadBookings();
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openLightbox(src) { document.getElementById('lightboxImg').src=src; document.getElementById('lightboxOverlay').style.display='flex'; }
+
+// ── OVERVIEW ──────────────────────────────────────
+async function loadOverview() {
+  const { ok, data } = await AdminAPI.getStats();
+  if (!ok) return;
+  const s = data.data;
+  document.getElementById('adminStats').innerHTML = `
+    <div class="stat-card admin-stat-card"><div class="stat-icon">👷</div><div class="stat-value">${s.totalWorkers}</div><div class="stat-label">Total Workers</div></div>
+    <div class="stat-card admin-stat-card"><div class="stat-icon">👤</div><div class="stat-value">${s.totalCustomers}</div><div class="stat-label">Total Customers</div></div>
+    <div class="stat-card admin-stat-card"><div class="stat-icon">📋</div><div class="stat-value">${s.totalBookings}</div><div class="stat-label">Total Bookings</div></div>
+    <div class="stat-card admin-stat-card"><div class="stat-icon">💰</div><div class="stat-value">${formatCurrency(s.totalRevenue)}</div><div class="stat-label">Total Revenue</div></div>
+    <div class="stat-card" style="border-color:rgba(244,200,66,0.3)"><div class="stat-icon">⏳</div><div class="stat-value" style="color:var(--gold)">${s.pendingWorkers}</div><div class="stat-label">Pending Verification</div></div>
+    <div class="stat-card" style="border-color:rgba(0,201,167,0.3)"><div class="stat-icon">✅</div><div class="stat-value" style="color:var(--teal)">${s.verifiedWorkers}</div><div class="stat-label">Verified Workers</div></div>
+    <div class="stat-card"><div class="stat-icon">🔄</div><div class="stat-value">${s.activeBookings}</div><div class="stat-label">Active Jobs</div></div>
+    <div class="stat-card"><div class="stat-icon">✔️</div><div class="stat-value">${s.completedBookings}</div><div class="stat-label">Completed</div></div>`;
+
+  // Load pending workers
+  const { ok: ok2, data: d2 } = await AdminAPI.getWorkers({ status: 'pending' });
+  const el = document.getElementById('pendingWorkersList');
+  if (!ok2 || !d2.data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No pending verifications!</div></div>'; return; }
+  el.innerHTML = d2.data.map(w => renderWorkerVerifyCard(w)).join('');
+}
+
+function renderWorkerVerifyCard(w) {
+  const photo = w.liveSelfieImageUrl || w.profilePhotoUrl;
+  const photoHtml = photo ? `<img src="${photo}" class="worker-verify-photo" alt="${w.firstName}" onclick="openLightbox('${photo}')">` : `<div class="worker-verify-photo" style="display:flex;align-items:center;justify-content:center;background:var(--navy-mid);font-size:1.8rem">${w.avatar||'👷'}</div>`;
+  const vBadge = w.verificationStatus==='verified' ? 'verification-verified' : w.verificationStatus==='rejected' ? 'verification-rejected' : 'verification-pending';
+  return `<div class="worker-verify-card">
+    ${photoHtml}
+    <div class="worker-verify-info">
+      <div class="worker-verify-name">${w.firstName} ${w.lastName||''} <span class="verification-badge ${vBadge}">${w.verificationStatus}</span></div>
+      <div class="worker-verify-detail">📞 ${w.phone} · 📍 ${w.city||'N/A'} · 🔧 ${(w.skills||[]).join(', ')||'N/A'}</div>
+      <div class="worker-verify-detail">Confidence: ${w.faceMatchConfidence ? w.faceMatchConfidence+'%' : 'N/A'}</div>
+    </div>
+    <div class="worker-verify-actions">
+      <button class="btn btn-sm btn-success" onclick="verifyWorker('${w.id}','approve')">✅ Approve</button>
+      <button class="btn btn-sm btn-danger" onclick="verifyWorker('${w.id}','reject')">❌ Reject</button>
+      <button class="btn btn-sm btn-ghost" onclick="viewWorkerDetail('${w.id}')">👁️</button>
+    </div>
+  </div>`;
+}
+
+async function verifyWorker(id, action) {
+  const notes = action==='reject' ? prompt('Rejection reason (optional):') : null;
+  const { ok, data } = await AdminAPI.verifyWorker(id, action, notes);
+  if (ok) { showToast(`Worker ${action==='approve'?'approved':'rejected'} ✅`); loadOverview(); }
+  else showToast(data.message || 'Failed.', 'error');
+}
+
+async function viewWorkerDetail(id) {
+  const { ok, data } = await AdminAPI.getWorker(id);
+  if (!ok) return;
+  const w = data.data;
+  const photo = w.liveSelfieImageUrl || w.profilePhotoUrl;
+  document.getElementById('workerDetailTitle').textContent = `${w.firstName} ${w.lastName||''}`;
+  document.getElementById('workerDetailContent').innerHTML = `
+    <div style="text-align:center;margin-bottom:20px">
+      ${photo ? `<img src="${photo}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid var(--teal);cursor:pointer" onclick="openLightbox('${photo}')">` : ''}
+      <div style="margin-top:10px"><span class="verification-badge verification-${w.verificationStatus}">${w.verificationStatus}</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.88rem;color:var(--text-soft)">
+      <div><strong>Phone:</strong> ${w.phone}</div>
+      <div><strong>City:</strong> ${w.city||'N/A'}</div>
+      <div><strong>Skills:</strong> ${(w.skills||[]).join(', ')}</div>
+      <div><strong>Exp:</strong> ${w.experience||'N/A'}</div>
+      <div><strong>Rating:</strong> ⭐ ${w.rating||'New'}</div>
+      <div><strong>Confidence:</strong> ${w.faceMatchConfidence?w.faceMatchConfidence+'%':'N/A'}</div>
+      <div><strong>Aadhaar:</strong> ${w.aadhaarNumber ? 'XXXX-XXXX-'+w.aadhaarNumber.slice(-4) : 'Not provided'}</div>
+      <div><strong>Joined:</strong> ${formatDate(w.createdAt)}</div>
+    </div>
+    <div style="margin-top:16px"><strong style="font-size:0.88rem">Verification Documents:</strong></div>
+    <div class="doc-preview" style="margin-top:8px">
+      ${w.aadhaarFrontImageUrl ? `<img src="${w.aadhaarFrontImageUrl}" alt="Aadhaar Front" onclick="openLightbox('${w.aadhaarFrontImageUrl}')">` : '<div style="color:var(--text-dim);font-size:0.85rem">No Aadhaar front</div>'}
+      ${w.aadhaarBackImageUrl ? `<img src="${w.aadhaarBackImageUrl}" alt="Aadhaar Back" onclick="openLightbox('${w.aadhaarBackImageUrl}')">` : '<div style="color:var(--text-dim);font-size:0.85rem">No Aadhaar back</div>'}
+    </div>
+    ${w.verificationStatus==='pending' ? `<div style="display:flex;gap:12px;margin-top:20px">
+      <button class="btn btn-success" style="flex:1;justify-content:center" onclick="verifyWorker('${w.id}','approve');closeModal('workerDetailModal')">✅ Approve</button>
+      <button class="btn btn-danger" style="flex:1;justify-content:center" onclick="verifyWorker('${w.id}','reject');closeModal('workerDetailModal')">❌ Reject</button>
+    </div>` : ''}`;
+  document.getElementById('workerDetailModal').classList.add('open');
+}
+
+// ── WORKERS LIST ──────────────────────────────────
+async function loadWorkers() {
+  const status = document.getElementById('workerFilter').value;
+  const { ok, data } = await AdminAPI.getWorkers(status ? { status } : {});
+  const el = document.getElementById('workersList');
+  if (!ok || !data.data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">👷</div><div class="empty-text">No workers found.</div></div>'; return; }
+  el.innerHTML = data.data.map(w => renderWorkerVerifyCard(w)).join('');
+}
+
+// ── BOOKINGS LIST ─────────────────────────────────
+async function loadBookings() {
+  const status = document.getElementById('bookingFilter').value;
+  const { ok, data } = await AdminAPI.getBookings(status ? { status } : {});
+  const el = document.getElementById('bookingsList');
+  if (!ok || !data.data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No bookings found.</div></div>'; return; }
+  el.innerHTML = data.data.map(b => {
+    const issuePhotos = (b.issuePhotoUrls||[]).map(u=>`<img src="${u}" onclick="openLightbox('${u}')">`).join('');
+    const compPhotos = (b.completionPhotoUrls||[]).map(u=>`<img src="${u}" onclick="openLightbox('${u}')">`).join('');
+    return `<div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;margin-bottom:4px">🔧 ${b.service} ${statusBadge(b.status)}</div>
+          <div style="font-size:0.85rem;color:var(--text-dim)">${b.description||'—'}</div>
+          <div style="font-size:0.82rem;color:var(--text-soft);margin-top:4px">👤 ${b.customerName} → 👷 ${b.workerName} · 📍 ${b.address||'—'}</div>
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-top:4px">${formatDate(b.createdAt)} ${b.price?'· '+formatCurrency(b.price):''}</div>
+          ${b.review ? `<div style="margin-top:6px;font-size:0.82rem">⭐ ${b.review.rating}/5 — "${b.review.comment||''}" <span class="verification-badge verification-${b.review.sentiment==='positive'?'verified':b.review.sentiment==='negative'?'rejected':'pending'}">${b.review.sentiment||'N/A'}</span></div>` : ''}
+        </div>
+      </div>
+      ${issuePhotos||compPhotos ? `<div style="display:flex;gap:20px;margin-top:12px;flex-wrap:wrap">
+        ${issuePhotos ? `<div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px">📸 Issue Photos</div><div class="photo-gallery">${issuePhotos}</div></div>` : ''}
+        ${compPhotos ? `<div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px">✅ Completion Photos</div><div class="photo-gallery">${compPhotos}</div></div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+loadOverview();
+</script>
+</body>
+</html>

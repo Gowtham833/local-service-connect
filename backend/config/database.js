@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const path = require('path');
 
 let sequelizeInstance = null;
 
@@ -9,7 +10,16 @@ let sequelizeInstance = null;
 function getSequelize(config) {
   if (sequelizeInstance) return sequelizeInstance;
 
-  const sslOptions = config.dbHost && config.dbHost.includes('rds.amazonaws.com')
+  if (process.env.DB_DIALECT === 'sqlite') {
+    sequelizeInstance = new Sequelize({
+      dialect: 'sqlite',
+      storage: path.join(__dirname, '../database.sqlite'),
+      logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    });
+    return sequelizeInstance;
+  }
+
+  const sslOptions = (config.dbHost && config.dbHost.includes('rds.amazonaws.com')) || process.env.DB_SSL === 'true'
     ? { ssl: { require: true, rejectUnauthorized: false } }
     : {};
 

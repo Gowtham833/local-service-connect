@@ -2,19 +2,21 @@
  * Sequelize Models Index
  * Loads all models, runs associations, and exports db object.
  */
-const CustomerModel = require('./Customer');
-const WorkerModel   = require('./Worker');
-const BookingModel  = require('./Booking');
-const ReviewModel   = require('./Review');
+const CustomerModel           = require('./Customer');
+const WorkerModel             = require('./Worker');
+const BookingModel            = require('./Booking');
+const ReviewModel             = require('./Review');
+const PasswordResetTokenModel = require('./PasswordResetToken');
 
 const db = {};
 
 function initModels(sequelize) {
   db.sequelize = sequelize;
-  db.Customer  = CustomerModel(sequelize);
-  db.Worker    = WorkerModel(sequelize);
-  db.Booking   = BookingModel(sequelize);
-  db.Review    = ReviewModel(sequelize);
+  db.Customer            = CustomerModel(sequelize);
+  db.Worker              = WorkerModel(sequelize);
+  db.Booking             = BookingModel(sequelize);
+  db.Review              = ReviewModel(sequelize);
+  db.PasswordResetToken  = PasswordResetTokenModel(sequelize);
 
   // Run associations
   Object.values(db).forEach(model => {

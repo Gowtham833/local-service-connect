@@ -5,14 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Login — ServiConnect</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/shared.css">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --orange: #FF5C1A; --orange-light: #FF8A5B;
-    --navy: #0D1B2A; --navy-mid: #162336; --navy-soft: #1E2F45;
-    --text-primary: #FFFFFF; --text-dim: rgba(255,255,255,0.5);
-  }
-  body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--text-primary); min-height: 100vh; display: flex; }
+  body { display: flex; min-height: 100vh; }
   .left-panel {
     width: 46%; background: linear-gradient(160deg, #1a0800, #2d0f00 40%, #0D1B2A);
     display: flex; flex-direction: column; justify-content: space-between;
@@ -50,7 +45,7 @@
   input::placeholder { color:rgba(255,255,255,0.25); }
   input:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,92,26,0.12); }
   .input-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .forgot { display:block; text-align:right; font-size:0.82rem; color:var(--text-dim); text-decoration:none; margin-top:-12px; margin-bottom:24px; }
+  .forgot { display:block; text-align:right; font-size:0.82rem; color:var(--text-dim); text-decoration:none; margin-top:-12px; margin-bottom:24px; cursor:pointer; }
   .forgot:hover { color:var(--orange); }
   .submit-btn { width:100%; background:var(--orange); color:#fff; border:none; border-radius:14px; padding:16px; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.25s; }
   .submit-btn:hover:not(:disabled) { background:var(--orange-light); transform:translateY(-2px); box-shadow:0 8px 30px rgba(255,92,26,0.35); }
@@ -59,9 +54,6 @@
   .switch-link { text-align:center; margin-top:28px; font-size:0.85rem; color:var(--text-dim); }
   .switch-link a { color:var(--orange); text-decoration:none; font-weight:600; }
   #signup-form { display:none; }
-  .toast { position:fixed; bottom:28px; right:28px; padding:14px 22px; border-radius:12px; font-size:0.88rem; background:var(--navy-soft); border:1px solid rgba(255,255,255,0.1); color:#fff; z-index:9999; opacity:0; transform:translateY(16px); transition:all 0.35s ease; }
-  .toast.show { opacity:1; transform:translateY(0); }
-  .toast-error { border-color:#F44336; }
 </style>
 </head>
 <body>
@@ -98,7 +90,7 @@
       <div id="loginError" class="error-msg"></div>
       <div class="form-group"><label>Phone Number</label><input type="tel" id="loginPhone" placeholder="+91 98765 43210 (demo: 9876543210)"></div>
       <div class="form-group"><label>Password</label><input type="password" id="loginPass" placeholder="password123"></div>
-      <a href="#" class="forgot">Forgot password?</a>
+      <a class="forgot" onclick="openForgotPassword()">Forgot password?</a>
       <button class="submit-btn" id="loginBtn" onclick="doLogin()">Login as Customer →</button>
       <p style="font-size:0.78rem;color:var(--text-dim);text-align:center;margin-top:14px">Demo: phone <strong style="color:#fff">9876543210</strong> / pass <strong style="color:#fff">password123</strong></p>
     </div>
@@ -121,13 +113,58 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">🔐 Reset Password</div>
+    <div class="otp-step-indicator">
+      <div class="otp-step-dot active" id="stepDot1"></div>
+      <div class="otp-step-dot" id="stepDot2"></div>
+      <div class="otp-step-dot" id="stepDot3"></div>
+    </div>
+
+    <!-- Step 1: Enter Phone -->
+    <div class="otp-step active" id="otpStep1">
+      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:20px">Enter your registered phone number to receive a 6-digit OTP.</p>
+      <div class="form-group"><label>Phone Number</label><input type="tel" id="resetPhone" placeholder="9876543210" class="form-input"></div>
+      <button class="submit-btn" onclick="sendOTP()">Send OTP →</button>
+    </div>
+
+    <!-- Step 2: Enter OTP -->
+    <div class="otp-step" id="otpStep2">
+      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:12px">Enter the 6-digit code sent to your phone.</p>
+      <div class="otp-container">
+        <input type="text" class="otp-input" maxlength="1" data-index="0">
+        <input type="text" class="otp-input" maxlength="1" data-index="1">
+        <input type="text" class="otp-input" maxlength="1" data-index="2">
+        <input type="text" class="otp-input" maxlength="1" data-index="3">
+        <input type="text" class="otp-input" maxlength="1" data-index="4">
+        <input type="text" class="otp-input" maxlength="1" data-index="5">
+      </div>
+      <div class="otp-timer" id="otpTimer">Code expires in <strong>5:00</strong></div>
+      <button class="submit-btn" style="margin-top:20px" onclick="verifyOTP()">Verify OTP →</button>
+    </div>
+
+    <!-- Step 3: New Password -->
+    <div class="otp-step" id="otpStep3">
+      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:20px">Create your new password.</p>
+      <div class="form-group"><label>New Password</label><input type="password" id="newPass" placeholder="Min 6 characters" class="form-input"></div>
+      <div class="form-group"><label>Confirm Password</label><input type="password" id="confirmPass" placeholder="Re-enter password" class="form-input"></div>
+      <button class="submit-btn" onclick="resetPassword()">Reset Password →</button>
+    </div>
+
+    <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:16px" onclick="closeForgotModal()">Cancel</button>
+  </div>
+</div>
 
 <script src="/js/config.js?v=2"></script>
 <script src="/js/api.js"></script>
 <script>
 // If already logged in, redirect
 if (Auth.isLoggedIn()) Auth.redirectToDashboard();
+
+let resetToken = null;
+let otpTimerInterval = null;
 
 function showTab(tab) {
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
@@ -138,9 +175,110 @@ function showTab(tab) {
 
 function showError(id, msg) {
   const el = document.getElementById(id);
-  el.textContent = msg; el.style.display = 'block';
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
 }
 
+// ── Forgot Password OTP Flow ──────────────────────
+function openForgotPassword() {
+  document.getElementById('forgotModal').classList.add('open');
+  showOTPStep(1);
+}
+
+function closeForgotModal() {
+  document.getElementById('forgotModal').classList.remove('open');
+  if (otpTimerInterval) clearInterval(otpTimerInterval);
+  resetToken = null;
+}
+
+function showOTPStep(step) {
+  document.querySelectorAll('.otp-step').forEach(el => el.classList.remove('active'));
+  document.getElementById(`otpStep${step}`).classList.add('active');
+  document.querySelectorAll('.otp-step-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i < step);
+  });
+}
+
+async function sendOTP() {
+  const phone = document.getElementById('resetPhone').value.trim();
+  if (!phone) { showToast('Please enter your phone number.', 'error'); return; }
+  
+  const { ok, data } = await AuthAPI.requestOTP(phone, 'customer');
+  if (ok) {
+    showToast('✅ OTP sent! Check your phone (or server console for dev).');
+    if (data._devOtp) showToast(`[DEV] Your OTP is: ${data._devOtp}`, 'info');
+    showOTPStep(2);
+    startOTPTimer();
+    setupOTPInputs();
+  } else {
+    showToast(data.message || 'Failed to send OTP.', 'error');
+  }
+}
+
+function startOTPTimer() {
+  let seconds = 300;
+  const el = document.getElementById('otpTimer');
+  if (otpTimerInterval) clearInterval(otpTimerInterval);
+  otpTimerInterval = setInterval(() => {
+    seconds--;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    el.innerHTML = `Code expires in <strong>${m}:${s.toString().padStart(2, '0')}</strong>`;
+    if (seconds <= 0) {
+      clearInterval(otpTimerInterval);
+      el.innerHTML = '<strong style="color:#F44336">OTP expired. Please request a new one.</strong>';
+    }
+  }, 1000);
+}
+
+function setupOTPInputs() {
+  const inputs = document.querySelectorAll('.otp-input');
+  inputs.forEach((inp, i) => {
+    inp.value = '';
+    inp.addEventListener('input', (e) => {
+      if (e.target.value && i < inputs.length - 1) inputs[i + 1].focus();
+      e.target.classList.toggle('filled', !!e.target.value);
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus();
+    });
+  });
+  inputs[0].focus();
+}
+
+async function verifyOTP() {
+  const phone = document.getElementById('resetPhone').value.trim();
+  const otp = [...document.querySelectorAll('.otp-input')].map(i => i.value).join('');
+  if (otp.length !== 6) { showToast('Please enter all 6 digits.', 'error'); return; }
+
+  const { ok, data } = await AuthAPI.verifyOTP(phone, otp, 'customer');
+  if (ok) {
+    resetToken = data.resetToken;
+    showToast('✅ OTP verified! Set your new password.');
+    showOTPStep(3);
+  } else {
+    showToast(data.message || 'Invalid OTP.', 'error');
+  }
+}
+
+async function resetPassword() {
+  const phone = document.getElementById('resetPhone').value.trim();
+  const newPass = document.getElementById('newPass').value;
+  const confirmPass = document.getElementById('confirmPass').value;
+  
+  if (newPass.length < 6) { showToast('Password must be at least 6 characters.', 'error'); return; }
+  if (newPass !== confirmPass) { showToast('Passwords do not match.', 'error'); return; }
+
+  const { ok, data } = await AuthAPI.resetPasswordOTP(phone, newPass, resetToken, 'customer');
+  if (ok) {
+    showToast('✅ Password reset successfully! Please login.');
+    closeForgotModal();
+  } else {
+    showToast(data.message || 'Failed to reset password.', 'error');
+  }
+}
+
+// ── Login ─────────────────────────────────────────
 async function doLogin() {
   const phone = document.getElementById('loginPhone').value.trim();
   const pass  = document.getElementById('loginPass').value;
@@ -149,7 +287,6 @@ async function doLogin() {
 
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = 'Logging in…';
-
   const { ok, data } = await AuthAPI.customerLogin(phone, pass);
   btn.disabled = false; btn.textContent = 'Login as Customer →';
 
@@ -162,6 +299,7 @@ async function doLogin() {
   }
 }
 
+// ── Signup ────────────────────────────────────────
 async function doSignup() {
   const payload = {
     firstName: document.getElementById('regFirst').value.trim(),
@@ -175,10 +313,8 @@ async function doSignup() {
   if (!payload.firstName || !payload.phone || !payload.password) {
     showError('signupError', 'Please fill all required fields.'); return;
   }
-
   const btn = document.getElementById('signupBtn');
   btn.disabled = true; btn.textContent = 'Creating account…';
-
   const { ok, data } = await AuthAPI.customerRegister(payload);
   btn.disabled = false; btn.textContent = 'Create Account →';
 
@@ -197,12 +333,6 @@ document.addEventListener('keydown', e => {
     else doSignup();
   }
 });
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
 </script>
 </body>
 </html>

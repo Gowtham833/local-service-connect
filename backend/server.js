@@ -19,6 +19,7 @@ const authRoutes     = require('./routes/auth');
 const customerRoutes = require('./routes/customer');
 const workerRoutes   = require('./routes/worker');
 const aiRoutes       = require('./routes/ai');
+const adminRoutes    = require('./routes/admin');
 
 async function startServer() {
   // ── Load all config (env vars or AWS) ────────────────────────
@@ -51,17 +52,21 @@ async function startServer() {
   // ── Security + Logging Middleware ─────────────────────────────
   securityMiddleware(app, config);
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-  app.use(express.json({ limit: '10kb' }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: '15mb' }));  // Increased for base64 image uploads
+  app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
   // ── Serve Frontend Static Files ───────────────────────────────
   app.use(express.static(path.join(__dirname, '../frontend/public')));
+
+  // ── Serve Uploaded Files (local dev — replace with S3 in prod)
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   // ── API Routes ────────────────────────────────────────────────
   app.use('/api/auth',     authRoutes);
   app.use('/api/customer', customerRoutes);
   app.use('/api/worker',   workerRoutes);
   app.use('/api/ai',       aiRoutes);
+  app.use('/api/admin',    adminRoutes);
 
   // ── Health Check ──────────────────────────────────────────────
   app.get('/api/health', async (req, res) => {
@@ -97,6 +102,10 @@ async function startServer() {
 ║      Environment: ${(process.env.NODE_ENV || 'development').padEnd(13)}     ║
 ╚══════════════════════════════════════════╝
     `);
+    
+    // Start the SQS consumer worker
+    const { startDbWorker } = require('./workers/dbWorker');
+    startDbWorker();
   });
 
   return server;
