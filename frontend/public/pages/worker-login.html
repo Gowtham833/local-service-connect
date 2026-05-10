@@ -3,250 +3,326 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Worker Login — ServiConnect</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Worker Portal — ServiConnect</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/shared.css">
 <style>
-  body { font-family:'DM Sans',sans-serif; background:var(--navy); color:var(--text-primary); min-height:100vh; display:flex; }
-  .right-panel { flex:1; display:flex; align-items:center; justify-content:center; padding:40px 60px; order:1; overflow-y:auto; }
-  .left-panel { width:44%; background:linear-gradient(160deg,#001a15,#002a20 40%,#0D1B2A); display:flex; flex-direction:column; justify-content:space-between; padding:48px 56px; position:relative; overflow:hidden; order:2; }
-  .left-panel::before { content:''; position:absolute; top:-120px; left:-80px; width:500px; height:500px; background:radial-gradient(circle, rgba(0,201,167,0.18), transparent 70%); pointer-events:none; }
-  .back-link { display:inline-flex; align-items:center; gap:8px; color:rgba(255,255,255,0.5); text-decoration:none; font-size:0.85rem; position:relative; z-index:1; }
-  .back-link:hover { color:var(--teal); }
-  .panel-content { position:relative; z-index:1; }
-  .panel-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(0,201,167,0.12); border:1px solid rgba(0,201,167,0.3); color:var(--teal-light); padding:6px 16px; border-radius:50px; font-size:0.8rem; font-weight:500; letter-spacing:1px; text-transform:uppercase; margin-bottom:28px; }
-  .panel-title { font-family:'Syne',sans-serif; font-size:2.8rem; font-weight:800; letter-spacing:-1.5px; line-height:1.05; margin-bottom:20px; }
-  .panel-title .accent { color:var(--teal); }
-  .panel-sub { color:rgba(255,255,255,0.55); font-size:1rem; line-height:1.7; max-width:360px; }
-  .features { margin-top:36px; display:flex; flex-direction:column; gap:14px; }
-  .feature { display:flex; align-items:flex-start; gap:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:16px 20px; }
-  .feature-icon { width:40px; height:40px; border-radius:12px; background:rgba(0,201,167,0.1); display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
-  .feature-text h4 { font-family:'Syne',sans-serif; font-size:0.88rem; font-weight:700; margin-bottom:3px; }
-  .feature-text p { font-size:0.78rem; color:var(--text-dim); line-height:1.5; }
-  .panel-footer { position:relative; z-index:1; }
-  .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.3rem; }
-  .logo span { color:#FF5C1A; }
-  .tagline { font-size:0.78rem; color:var(--text-dim); margin-top:4px; }
-  .form-box { width:100%; max-width:440px; }
-  .form-heading { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; letter-spacing:-0.5px; margin-bottom:8px; }
-  .form-sub { color:var(--text-dim); font-size:0.88rem; margin-bottom:28px; line-height:1.6; }
-  .form-sub a { color:var(--teal); text-decoration:none; cursor:pointer; }
-  .tabs { display:flex; background:var(--navy-soft); border-radius:14px; padding:4px; margin-bottom:28px; }
-  .tab { flex:1; padding:10px; border-radius:11px; text-align:center; font-size:0.88rem; font-weight:500; cursor:pointer; transition:all 0.25s; color:var(--text-dim); }
-  .tab.active { background:var(--teal); color:#0D1B2A; font-weight:700; }
-  .form-group { margin-bottom:16px; }
-  label { display:block; font-size:0.82rem; font-weight:500; color:rgba(255,255,255,0.7); margin-bottom:6px; }
-  input, select { width:100%; background:var(--navy-soft); border:1.5px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 16px; font-family:'DM Sans',sans-serif; font-size:0.9rem; color:#fff; outline:none; transition:border-color 0.2s; appearance:none; }
-  input::placeholder { color:rgba(255,255,255,0.22); }
-  select option { background:var(--navy-soft); }
-  input:focus, select:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(0,201,167,0.12); }
+  :root { --glass-bg: rgba(13, 27, 42, 0.6); --glass-border: rgba(255, 255, 255, 0.1); }
+  body {
+    margin: 0; padding: 0; font-family: 'Inter', sans-serif;
+    color: #fff; min-height: 100vh; overflow-x: hidden;
+    background: #000; display: flex; align-items: center; justify-content: center;
+  }
+  
+  /* Ken Burns Background Animation */
+  .bg-animation {
+    position: fixed; top: -5%; left: -5%; width: 110%; height: 110%;
+    background-image: url('https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=2070&auto=format&fit=crop');
+    background-size: cover; background-position: center;
+    z-index: -2; animation: kenBurns 30s infinite alternate ease-in-out;
+  }
+  .bg-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(13,27,42,0.85) 0%, rgba(0,201,167,0.2) 100%);
+    z-index: -1;
+  }
+  @keyframes kenBurns {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.1) translate(-20px, -15px); }
+  }
+
+  /* Glassmorphism Container */
+  .glass-container {
+    background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border); border-radius: 24px;
+    padding: 40px 48px; width: 100%; max-width: 520px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    margin: 40px 20px; max-height: 90vh; overflow-y: auto;
+  }
+  .glass-container::-webkit-scrollbar { width: 6px; }
+  .glass-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+  
+  @keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .header { text-align: center; margin-bottom: 32px; }
+  .header h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; margin-bottom: 8px; letter-spacing: -1px; }
+  .header h1 span { color: var(--orange); }
+  .header p { color: rgba(255,255,255,0.7); font-size: 0.95rem; }
+
+  /* Tabs */
+  .tabs { display: flex; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 5px; margin-bottom: 32px; }
+  .tab { flex: 1; text-align: center; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.3s; color: rgba(255,255,255,0.5); }
+  .tab.active { background: var(--teal); color: #000; box-shadow: 0 4px 15px rgba(0,201,167,0.3); }
+
+  /* Forms */
+  .form-group { margin-bottom: 20px; text-align: left; }
+  .form-group label { display: block; font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
+  .form-input, select {
+    width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 14px 16px; color: #fff; font-family: 'Inter', sans-serif;
+    font-size: 0.95rem; transition: all 0.3s; outline: none;
+  }
+  select option { background: #0D1B2A; }
+  .form-input:focus, select:focus { border-color: var(--teal); background: rgba(255,255,255,0.08); box-shadow: 0 0 0 4px rgba(0,201,167,0.15); }
+  .form-input::placeholder { color: rgba(255,255,255,0.3); }
+  
+  .submit-btn {
+    width: 100%; background: linear-gradient(135deg, var(--teal) 0%, var(--teal-light) 100%);
+    color: #000; border: none; border-radius: 12px; padding: 16px;
+    font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; transition: all 0.3s; margin-top: 10px;
+    box-shadow: 0 8px 25px rgba(0,201,167,0.3);
+  }
+  .submit-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,201,167,0.5); }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* Specific elements from old CSS */
   .input-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .skill-tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-  .skill-tag { padding:5px 13px; border-radius:50px; border:1.5px solid rgba(255,255,255,0.1); font-size:0.78rem; cursor:pointer; transition:all 0.2s; color:var(--text-dim); }
+  .skill-tag { padding:8px 16px; border-radius:50px; background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); font-size:0.85rem; cursor:pointer; transition:all 0.2s; color:var(--text-dim); }
   .skill-tag.selected { background:rgba(0,201,167,0.15); border-color:var(--teal); color:var(--teal); }
-  .forgot { display:block; text-align:right; font-size:0.82rem; color:var(--text-dim); text-decoration:none; margin-top:-8px; margin-bottom:16px; cursor:pointer; }
-  .submit-btn { width:100%; background:var(--teal); color:#0D1B2A; border:none; border-radius:14px; padding:14px; font-family:'Syne',sans-serif; font-size:1rem; font-weight:800; cursor:pointer; transition:all 0.25s; }
-  .submit-btn:hover:not(:disabled) { background:var(--teal-light); transform:translateY(-2px); }
-  .submit-btn:disabled { opacity:0.6; cursor:not-allowed; }
-  .error-msg { background:rgba(244,67,54,0.1); border:1px solid rgba(244,67,54,0.3); color:#F44336; padding:10px 14px; border-radius:10px; font-size:0.85rem; margin-bottom:14px; display:none; }
-  .switch-link { text-align:center; margin-top:20px; font-size:0.85rem; color:var(--text-dim); }
-  .switch-link a { color:#FF5C1A; text-decoration:none; font-weight:600; }
+  .forgot { display:block; text-align:right; font-size:0.85rem; color:var(--teal); text-decoration:none; margin-top:-8px; margin-bottom:16px; cursor:pointer; transition: color 0.2s; }
+  .forgot:hover { color: #fff; }
+  .error-msg { background:rgba(244,67,54,0.1); border:1px solid rgba(244,67,54,0.3); color:#F44336; padding:12px 16px; border-radius:12px; font-size:0.85rem; margin-bottom:20px; display:none; }
+  .switch-link { text-align:center; margin-top:24px; font-size:0.9rem; color: rgba(255,255,255,0.6); }
+  .switch-link a { color:var(--teal); text-decoration:none; font-weight:600; transition: color 0.2s; }
+  .switch-link a:hover { color: #fff; }
   #signup-form { display:none; }
-  .section-divider { border-top:1px solid rgba(255,255,255,0.06); margin:20px 0; padding-top:16px; }
-  .section-divider-label { font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; color:var(--teal); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .section-divider { border-top:1px solid rgba(255,255,255,0.1); margin:24px 0; padding-top:20px; }
+  .section-divider-label { font-family:'Syne',sans-serif; font-weight:700; font-size:1rem; color:var(--teal); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  
+  /* OTP Elements */
+  .otp-container { display: flex; gap: 10px; justify-content: center; margin: 16px 0; }
+  .otp-input { width: 45px; height: 55px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; text-align: center; font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; outline: none; transition: border-color 0.3s; }
+  .otp-input:focus { border-color: var(--teal); background: rgba(255,255,255,0.1); }
+  .otp-input.filled { border-color: var(--teal); }
+
+  /* Aadhaar and Selfie Overrides */
+  .aadhaar-upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .aadhaar-upload-box { border: 2px dashed rgba(255,255,255,0.2); border-radius: 16px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); }
+  .aadhaar-upload-box:hover { border-color: var(--teal); background: rgba(0,201,167,0.1); }
+  .aadhaar-upload-box img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; }
+  .aadhaar-upload-label { font-size: 0.85rem; color: rgba(255,255,255,0.7); margin-top: 8px; }
+  
+  .camera-container { position: relative; border-radius: 16px; overflow: hidden; background: #000; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); }
+  .camera-container video { width: 100%; display: block; border-radius: 16px; }
+  .camera-controls { display: flex; gap: 12px; justify-content: center; margin-top: 12px; }
+  .camera-btn { padding: 12px 24px; border-radius: 50px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; font-size: 0.9rem; }
+  .camera-btn-capture { background: var(--teal); color: #000; box-shadow: 0 4px 15px rgba(0,201,167,0.3); }
+  .camera-btn-retake { background: rgba(255,255,255,0.1); color: #fff; }
+  .selfie-preview { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--teal); margin: 12px auto; display: block; box-shadow: 0 0 20px rgba(0,201,167,0.4); }
+
 </style>
 </head>
 <body>
 
-<div class="right-panel">
-  <div class="form-box">
-    <h2 class="form-heading">Worker Portal</h2>
-    <p class="form-sub">Login or <a onclick="showTab('signup')">register</a> to start receiving job requests.</p>
-    <div class="tabs">
-      <div class="tab active" id="tabLogin" onclick="showTab('login')">Login</div>
-      <div class="tab" id="tabSignup" onclick="showTab('signup')">Register</div>
-    </div>
+<div class="bg-animation"></div>
+<div class="bg-overlay"></div>
 
-    <!-- LOGIN -->
-    <div id="login-form">
-      <div id="loginError" class="error-msg"></div>
-
-      <!-- Step 1: Phone -->
-      <div id="loginStep1">
-        <div class="form-group">
-          <label>Phone Number</label>
-          <input type="tel" id="loginPhone" placeholder="9876543210 (demo: 9123456789)">
-        </div>
-        <a class="forgot" onclick="openForgotPassword()">Forgot Password?</a>
-        <button class="submit-btn" id="sendOtpBtn" onclick="sendLoginOTP()">Send Login OTP →</button>
-      </div>
-
-      <!-- Step 2: OTP -->
-      <div id="loginStep2" style="display:none">
-        <div class="form-group">
-          <label>Enter 6-Digit OTP</label>
-          <div class="otp-container" style="margin-bottom:20px">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="0">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="1">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="2">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="3">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="4">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="5">
-          </div>
-        </div>
-        <button class="submit-btn" id="loginBtn" onclick="doLogin()">Verify & Login →</button>
-        <p style="text-align:center;margin-top:16px;font-size:0.85rem">
-          <a onclick="showLoginStep(1)" style="color:var(--teal);cursor:pointer">← Change Phone Number</a>
-        </p>
-      </div>
-
-      <p style="font-size:0.78rem;color:var(--text-dim);text-align:center;margin-top:12px">Demo: phone <strong style="color:#fff">9123456789</strong></p>
-    </div>
-
-    <!-- SIGNUP -->
-    <div id="signup-form">
-      <div id="signupError" class="error-msg"></div>
-      <div class="input-row">
-        <div class="form-group"><label>First Name *</label><input type="text" id="regFirst" placeholder="Suresh"></div>
-        <div class="form-group"><label>Last Name</label><input type="text" id="regLast" placeholder="Reddy"></div>
-      </div>
-      
-      <div class="form-group">
-        <label>Phone Number *</label>
-        <div style="display:flex;gap:10px">
-          <input type="tel" id="regPhone" placeholder="9876543210" style="flex:1">
-          <button type="button" class="btn btn-teal btn-sm" id="regOtpBtn" onclick="sendRegOTP()" style="border-radius:12px;white-space:nowrap;background:var(--orange);color:#fff">Send OTP</button>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Verification Code (OTP) *</label>
-        <div class="otp-container" style="justify-content:flex-start;gap:8px;margin:10px 0">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="0" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="1" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="2" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="3" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="4" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="5" style="width:42px;height:48px;font-size:1.1rem">
-        </div>
-      </div>
-
-      <div class="form-group"><label>City / Area</label><input type="text" id="regCity" placeholder="Hyderabad, Chennai…"></div>
-      <div class="form-group">
-        <label>Your Skills *</label>
-        <div class="skill-tags" id="skillTags">
-          <div class="skill-tag selected" onclick="toggleSkill(this)">🔧 Plumbing</div>
-          <div class="skill-tag" onclick="toggleSkill(this)">⚡ Electrical</div>
-          <div class="skill-tag" onclick="toggleSkill(this)">🧹 Cleaning</div>
-          <div class="skill-tag" onclick="toggleSkill(this)">🎨 Painting</div>
-          <div class="skill-tag" onclick="toggleSkill(this)">🩺 Medical Help</div>
-          <div class="skill-tag" onclick="toggleSkill(this)">💧 Water Tanker</div>
-          <div class="skill-tag" onclick="toggleSkill(this)">🪟 Carpentry</div>
-          <div class="skill-tag" onclick="toggleSkill(this)">❄️ AC Service</div>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Experience</label>
-        <select id="regExp"><option value="">Select…</option><option>Less than 1 year</option><option>1-3 years</option><option>3-5 years</option><option>5-10 years</option><option>10+ years</option></select>
-      </div>
-      <div class="form-group"><label>Password *</label><input type="password" id="regPass" placeholder="Create a strong password"></div>
-
-      <!-- Identity Verification Section -->
-      <div class="section-divider">
-        <div class="section-divider-label">🛡️ Identity Verification</div>
-        <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:16px">Complete verification to become a trusted worker. Upload your Aadhaar and take a live selfie.</p>
-      </div>
-
-      <div class="form-group">
-        <label>Aadhaar Number</label>
-        <input type="text" id="regAadhaar" placeholder="1234 5678 9012" maxlength="14">
-      </div>
-
-      <div class="form-group">
-        <label>Aadhaar Card Photos</label>
-        <div class="aadhaar-upload-grid">
-          <div class="aadhaar-upload-box" id="aadhaarFrontBox" onclick="document.getElementById('aadhaarFrontInput').click()">
-            <span class="upload-icon" style="font-size:1.8rem">📄</span>
-            <div class="aadhaar-upload-label">Front Side</div>
-            <input type="file" id="aadhaarFrontInput" accept="image/*" style="display:none" onchange="previewAadhaar(this,'front')">
-          </div>
-          <div class="aadhaar-upload-box" id="aadhaarBackBox" onclick="document.getElementById('aadhaarBackInput').click()">
-            <span class="upload-icon" style="font-size:1.8rem">📄</span>
-            <div class="aadhaar-upload-label">Back Side</div>
-            <input type="file" id="aadhaarBackInput" accept="image/*" style="display:none" onchange="previewAadhaar(this,'back')">
-          </div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Live Selfie *</label>
-        <div id="selfieSection">
-          <div class="camera-container" id="cameraBox" style="display:none">
-            <video id="selfieVideo" autoplay playsinline style="width:100%;border-radius:12px"></video>
-            <canvas id="selfieCanvas" style="display:none"></canvas>
-          </div>
-          <div id="selfiePreviewBox" style="display:none;text-align:center">
-            <img id="selfiePreviewImg" class="selfie-preview" alt="Selfie">
-          </div>
-          <div class="camera-controls">
-            <button type="button" class="camera-btn camera-btn-capture" id="cameraStartBtn" onclick="startSelfieCapture()">📷 Open Camera</button>
-            <button type="button" class="camera-btn camera-btn-capture" id="captureBtn" onclick="captureSelfie()" style="display:none">📸 Capture</button>
-            <button type="button" class="camera-btn camera-btn-retake" id="retakeBtn" onclick="retakeSelfie()" style="display:none">🔄 Retake</button>
-          </div>
-        </div>
-      </div>
-
-      <button class="submit-btn" id="signupBtn" onclick="doSignup()">Register & Start Earning →</button>
-      <p style="font-size:0.75rem;color:var(--text-dim);text-align:center;margin-top:10px">🔒 Your Aadhaar data is encrypted and only accessible by admins for verification.</p>
-    </div>
-
-    <div class="switch-link">Looking for services? <a href="/pages/customer-login.html">Customer Login →</a></div>
+<div class="glass-container">
+  <div class="header">
+    <h1>Servi<span>Connect</span></h1>
+    <p>Worker Portal — Join the network</p>
   </div>
-</div>
 
-<div class="left-panel">
-  <a href="/index.html" class="back-link">← Back to home</a>
-  <div class="panel-content">
-    <div class="panel-badge">🔧 Worker Portal</div>
-    <h2 class="panel-title">More Jobs.<br><span class="accent">More Income.</span><br>Less Waiting.</h2>
-    <p class="panel-sub">Go online, appear on the customer map, and receive job requests directly — no middleman.</p>
-    <div class="features">
-      <div class="feature"><div class="feature-icon">📡</div><div class="feature-text"><h4>Appear on the Live Map</h4><p>Toggle available and your profile shows up for nearby customers.</p></div></div>
-      <div class="feature"><div class="feature-icon">📲</div><div class="feature-text"><h4>Instant Job Alerts</h4><p>Get notified the moment a customer posts a request.</p></div></div>
-      <div class="feature"><div class="feature-icon">🛡️</div><div class="feature-text"><h4>Verified Badge</h4><p>Complete Aadhaar + selfie verification for customer trust.</p></div></div>
+  <div class="tabs">
+    <div class="tab active" id="tabLogin" onclick="showTab('login')">Login</div>
+    <div class="tab" id="tabSignup" onclick="showTab('signup')">Register</div>
+  </div>
+
+  <!-- LOGIN FORM -->
+  <div id="login-form">
+    <div id="loginError" class="error-msg"></div>
+
+    <!-- Step 1: Phone -->
+    <div id="loginStep1">
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="loginPhone" class="form-input" placeholder="9876543210 (demo: 9123456789)">
+      </div>
+      <a class="forgot" onclick="openForgotPassword()">Forgot Password?</a>
+      <button class="submit-btn" id="sendOtpBtn" onclick="sendLoginOTP()">Continue →</button>
+      <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);text-align:center;margin-top:20px">Demo: phone <strong style="color:#fff">9123456789</strong></p>
+    </div>
+
+    <!-- Step 2: OTP -->
+    <div id="loginStep2" style="display:none">
+      <div class="form-group">
+        <label style="text-align:center">Enter 6-Digit OTP</label>
+        <div class="otp-container">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="0">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="1">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="2">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="3">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="4">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="5">
+        </div>
+      </div>
+      <button class="submit-btn" id="loginBtn" onclick="doLogin()">Verify & Login →</button>
+      <p style="text-align:center;margin-top:20px;font-size:0.9rem">
+        <a onclick="showLoginStep(1)" style="color:var(--teal);cursor:pointer">← Change Phone Number</a>
+      </p>
     </div>
   </div>
-  <div class="panel-footer">
-    <div class="logo">Servi<span>Connect</span></div>
-    <div class="tagline">Right Worker. Right Time. Right at Your Door.</div>
+
+  <!-- SIGNUP FORM -->
+  <div id="signup-form">
+    <div id="signupError" class="error-msg"></div>
+    
+    <div class="input-row">
+      <div class="form-group"><label>First Name *</label><input type="text" id="regFirst" class="form-input" placeholder="Suresh"></div>
+      <div class="form-group"><label>Last Name</label><input type="text" id="regLast" class="form-input" placeholder="Reddy"></div>
+    </div>
+    
+    <div class="form-group">
+      <label>Phone Number *</label>
+      <div style="display:flex;gap:10px">
+        <input type="tel" id="regPhone" class="form-input" placeholder="9876543210" style="flex:1">
+        <button type="button" class="submit-btn" id="regOtpBtn" onclick="sendRegOTP()" style="width:auto;padding:14px 20px;margin-top:0;font-size:0.9rem">Send OTP</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Verification Code (OTP) *</label>
+      <div class="otp-container" style="justify-content:flex-start;gap:8px;margin:10px 0">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="0" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="1" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="2" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="3" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="4" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="5" style="width:40px;height:48px;font-size:1.1rem">
+      </div>
+    </div>
+
+    <div class="form-group"><label>City / Area</label><input type="text" id="regCity" class="form-input" placeholder="Hyderabad, Chennai…"></div>
+    
+    <div class="form-group">
+      <label>Your Skills *</label>
+      <div class="skill-tags" id="skillTags">
+        <div class="skill-tag selected" onclick="toggleSkill(this)">🔧 Plumbing</div>
+        <div class="skill-tag" onclick="toggleSkill(this)">⚡ Electrical</div>
+        <div class="skill-tag" onclick="toggleSkill(this)">🧹 Cleaning</div>
+        <div class="skill-tag" onclick="toggleSkill(this)">🎨 Painting</div>
+        <div class="skill-tag" onclick="toggleSkill(this)">🩺 Medical Help</div>
+        <div class="skill-tag" onclick="toggleSkill(this)">💧 Water Tanker</div>
+        <div class="skill-tag" onclick="toggleSkill(this)">🪟 Carpentry</div>
+        <div class="skill-tag" onclick="toggleSkill(this)">❄️ AC Service</div>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>Experience</label>
+      <select id="regExp">
+        <option value="">Select…</option>
+        <option>Less than 1 year</option>
+        <option>1-3 years</option>
+        <option>3-5 years</option>
+        <option>5-10 years</option>
+        <option>10+ years</option>
+      </select>
+    </div>
+    
+    <div class="form-group"><label>Password *</label><input type="password" id="regPass" class="form-input" placeholder="Create a strong password"></div>
+
+    <!-- Identity Verification Section -->
+    <div class="section-divider">
+      <div class="section-divider-label">🛡️ Identity Verification</div>
+      <p style="font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:20px;line-height:1.5">Complete verification to become a trusted worker. Upload your Aadhaar and take a live selfie.</p>
+    </div>
+
+    <div class="form-group">
+      <label>Aadhaar Number</label>
+      <input type="text" id="regAadhaar" class="form-input" placeholder="1234 5678 9012" maxlength="14">
+    </div>
+
+    <div class="form-group">
+      <label>Aadhaar Card Photos</label>
+      <div class="aadhaar-upload-grid">
+        <div class="aadhaar-upload-box" id="aadhaarFrontBox" onclick="document.getElementById('aadhaarFrontInput').click()">
+          <span style="font-size:2rem;margin-bottom:8px">📄</span>
+          <div class="aadhaar-upload-label">Front Side</div>
+          <input type="file" id="aadhaarFrontInput" accept="image/*" style="display:none" onchange="previewAadhaar(this,'front')">
+        </div>
+        <div class="aadhaar-upload-box" id="aadhaarBackBox" onclick="document.getElementById('aadhaarBackInput').click()">
+          <span style="font-size:2rem;margin-bottom:8px">📄</span>
+          <div class="aadhaar-upload-label">Back Side</div>
+          <input type="file" id="aadhaarBackInput" accept="image/*" style="display:none" onchange="previewAadhaar(this,'back')">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Live Selfie *</label>
+      <div id="selfieSection">
+        <div class="camera-container" id="cameraBox" style="display:none">
+          <video id="selfieVideo" autoplay playsinline></video>
+          <canvas id="selfieCanvas" style="display:none"></canvas>
+        </div>
+        <div id="selfiePreviewBox" style="display:none;text-align:center">
+          <img id="selfiePreviewImg" class="selfie-preview" alt="Selfie">
+        </div>
+        <div class="camera-controls">
+          <button type="button" class="camera-btn camera-btn-capture" id="cameraStartBtn" onclick="startSelfieCapture()">📷 Open Camera</button>
+          <button type="button" class="camera-btn camera-btn-capture" id="captureBtn" onclick="captureSelfie()" style="display:none">📸 Capture</button>
+          <button type="button" class="camera-btn camera-btn-retake" id="retakeBtn" onclick="retakeSelfie()" style="display:none">🔄 Retake</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="signupBtn" onclick="doSignup()">Create Worker Account →</button>
+    <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);text-align:center;margin-top:16px">🔒 Your data is fully encrypted</p>
   </div>
+
+  <div class="switch-link">Looking for services? <a href="/pages/customer-login.html">Customer Login →</a></div>
 </div>
 
 <!-- FORGOT PASSWORD MODAL -->
+<style>
+/* Inline fallback for modal just in case shared.css is completely broken on the user's end */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #162336; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 36px; width: 100%; max-width: 420px; animation: modalIn 0.3s ease; }
+@keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+.modal-title { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; margin-bottom: 24px; color: #fff; }
+.otp-step { display: none; }
+.otp-step.active { display: block; }
+.otp-step-indicator { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
+.otp-step-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: all 0.3s; }
+.otp-step-dot.active { background: var(--teal); box-shadow: 0 0 10px rgba(0,201,167,0.4); }
+</style>
+
 <div class="modal-overlay" id="forgotModal">
-  <div class="modal" style="max-width:420px">
+  <div class="modal">
     <div class="modal-title">🔐 Reset Password</div>
     <div class="otp-step-indicator"><div class="otp-step-dot active" id="stepDot1"></div><div class="otp-step-dot" id="stepDot2"></div><div class="otp-step-dot" id="stepDot3"></div></div>
+    
     <div class="otp-step active" id="otpStep1">
-      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:20px">Enter your registered phone number to receive a 6-digit OTP.</p>
+      <p style="font-size:0.9rem;color:rgba(255,255,255,0.6);margin-bottom:20px">Enter your registered phone number to receive a 6-digit OTP.</p>
       <div class="form-group"><label>Phone Number</label><input type="tel" id="resetPhone" placeholder="9123456789" class="form-input"></div>
       <button class="submit-btn" onclick="sendOTP()">Send OTP →</button>
     </div>
+    
     <div class="otp-step" id="otpStep2">
-      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:12px">Enter the 6-digit code sent to your phone.</p>
+      <p style="font-size:0.9rem;color:rgba(255,255,255,0.6);margin-bottom:12px;text-align:center">Enter the 6-digit code sent to your phone.</p>
       <div class="otp-container">
         <input type="text" class="otp-input" maxlength="1" data-index="0"><input type="text" class="otp-input" maxlength="1" data-index="1"><input type="text" class="otp-input" maxlength="1" data-index="2"><input type="text" class="otp-input" maxlength="1" data-index="3"><input type="text" class="otp-input" maxlength="1" data-index="4"><input type="text" class="otp-input" maxlength="1" data-index="5">
       </div>
-      <div class="otp-timer" id="otpTimer">Code expires in <strong>5:00</strong></div>
-      <button class="submit-btn" style="margin-top:20px" onclick="verifyOTP()">Verify OTP →</button>
+      <div style="text-align:center;font-size:0.85rem;color:rgba(255,255,255,0.5);margin-bottom:20px" id="otpTimer">Code expires in <strong style="color:var(--teal)">5:00</strong></div>
+      <button class="submit-btn" onclick="verifyOTP()">Verify OTP →</button>
     </div>
+    
     <div class="otp-step" id="otpStep3">
-      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:20px">Create your new password.</p>
+      <p style="font-size:0.9rem;color:rgba(255,255,255,0.6);margin-bottom:20px">Create your new password.</p>
       <div class="form-group"><label>New Password</label><input type="password" id="newPass" placeholder="Min 6 characters" class="form-input"></div>
       <div class="form-group"><label>Confirm Password</label><input type="password" id="confirmPass" placeholder="Re-enter password" class="form-input"></div>
       <button class="submit-btn" onclick="resetPassword()">Reset Password →</button>
     </div>
-    <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:16px" onclick="closeForgotModal()">Cancel</button>
+    
+    <button class="submit-btn" style="background:rgba(255,255,255,0.05);color:white;box-shadow:none;margin-top:16px" onclick="closeForgotModal()">Cancel</button>
   </div>
 </div>
 
@@ -332,16 +408,16 @@ async function sendOTP() {
 function startTimer() {
   let s=300; const el=document.getElementById('otpTimer');
   if(otpTimerInterval) clearInterval(otpTimerInterval);
-  otpTimerInterval=setInterval(()=>{s--;const m=Math.floor(s/60);el.innerHTML=`Code expires in <strong>${m}:${(s%60).toString().padStart(2,'0')}</strong>`;if(s<=0){clearInterval(otpTimerInterval);el.innerHTML='<strong style="color:#F44336">Expired</strong>';}},1000);
+  otpTimerInterval=setInterval(()=>{s--;const m=Math.floor(s/60);el.innerHTML=`Code expires in <strong style="color:var(--teal)">${m}:${(s%60).toString().padStart(2,'0')}</strong>`;if(s<=0){clearInterval(otpTimerInterval);el.innerHTML='<strong style="color:#F44336">Expired</strong>';}},1000);
 }
 function setupInputs() {
-  const inps = document.querySelectorAll('.otp-input');
+  const inps = document.querySelectorAll('#forgotModal .otp-input');
   inps.forEach((inp,i)=>{inp.value='';inp.addEventListener('input',e=>{if(e.target.value&&i<inps.length-1)inps[i+1].focus();e.target.classList.toggle('filled',!!e.target.value);});inp.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)inps[i-1].focus();});});
   inps[0].focus();
 }
 async function verifyOTP() {
   const phone=document.getElementById('resetPhone').value.trim();
-  const otp=[...document.querySelectorAll('.otp-input')].map(i=>i.value).join('');
+  const otp=[...document.querySelectorAll('#forgotModal .otp-input')].map(i=>i.value).join('');
   if(otp.length!==6){showToast('Enter all 6 digits.','error');return;}
   const{ok,data}=await AuthAPI.verifyOTP(phone,otp,'worker');
   if(ok){resetTokenVal=data.resetToken;showToast('✅ OTP verified!');showOTPStep(3);}
@@ -386,7 +462,7 @@ async function sendLoginOTP() {
   btn.disabled = true; btn.textContent = 'Sending OTP…';
   
   const { ok, data } = await AuthAPI.sendLoginOTP(phone, 'worker');
-  btn.disabled = false; btn.textContent = 'Send Login OTP →';
+  btn.disabled = false; btn.textContent = 'Continue →';
 
   if (ok) {
     showToast('✅ OTP sent! Check your phone (or console in dev).');
@@ -396,7 +472,6 @@ async function sendLoginOTP() {
   }
 }
 
-// ── Login / Signup ───────────────────────────────
 async function doLogin() {
   const phone = document.getElementById('loginPhone').value.trim();
   const otp   = [...document.querySelectorAll('.login-otp')].map(i => i.value).join('');
@@ -417,6 +492,7 @@ async function doLogin() {
     showError('loginError', data.message || 'Login failed. Invalid OTP.');
   }
 }
+
 async function sendRegOTP() {
   const phone = document.getElementById('regPhone').value.trim();
   if (!phone) { showError('signupError', 'Please enter your phone number.'); return; }
@@ -470,10 +546,15 @@ async function doSignup() {
   if(!payload.firstName||!payload.phone||!payload.password||!skills.length||!payload.otp){showError('signupError','Fill all required fields, enter OTP, and select at least one skill.');return;}
   const btn=document.getElementById('signupBtn');btn.disabled=true;btn.textContent='Registering…';
   const{ok,data}=await AuthAPI.workerRegister(payload);
-  btn.disabled=false;btn.textContent='Register & Start Earning →';
+  btn.disabled=false;btn.textContent='Create Worker Account →';
   if(ok){Auth.save(data.token,data.role,data.user);showToast('🎉 Registered! Verification in progress.');setTimeout(()=>window.location.href='/pages/worker-dashboard.html',900);}
   else showError('signupError',data.message||'Registration failed.');
 }
+
+// Fallback toast function in case shared.css/js isn't loaded properly
+window.showToast = window.showToast || function(msg, type='success') {
+  alert((type === 'error' ? '❌ Error: ' : 'ℹ️ ') + msg);
+};
 </script>
 </body>
 </html>

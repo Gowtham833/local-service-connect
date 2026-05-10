@@ -4,164 +4,205 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Login — ServiConnect</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/shared.css">
 <style>
-  body { display: flex; min-height: 100vh; }
-  .left-panel {
-    width: 46%; background: linear-gradient(160deg, #1a0800, #2d0f00 40%, #0D1B2A);
-    display: flex; flex-direction: column; justify-content: space-between;
-    padding: 48px 56px; position: relative; overflow: hidden;
+  :root { --glass-bg: rgba(26, 8, 0, 0.6); --glass-border: rgba(255, 255, 255, 0.1); }
+  body {
+    margin: 0; padding: 0; font-family: 'Inter', sans-serif;
+    color: #fff; min-height: 100vh; overflow-x: hidden;
+    background: #000; display: flex; align-items: center; justify-content: center;
   }
-  .left-panel::before { content:''; position:absolute; top:-100px; right:-100px; width:500px; height:500px; background:radial-gradient(circle, rgba(255,92,26,0.2), transparent 70%); pointer-events:none; }
-  .back-link { display:inline-flex; align-items:center; gap:8px; color:rgba(255,255,255,0.5); text-decoration:none; font-size:0.85rem; transition:color 0.2s; position:relative; z-index:1; }
-  .back-link:hover { color:var(--orange); }
-  .panel-content { position:relative; z-index:1; }
-  .panel-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(255,92,26,0.15); border:1px solid rgba(255,92,26,0.3); color:var(--orange-light); padding:6px 16px; border-radius:50px; font-size:0.8rem; font-weight:500; letter-spacing:1px; text-transform:uppercase; margin-bottom:28px; }
-  .panel-title { font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; letter-spacing:-1.5px; line-height:1.05; margin-bottom:20px; }
-  .panel-title .accent { color:var(--orange); }
-  .panel-sub { color:rgba(255,255,255,0.55); font-size:1rem; line-height:1.7; max-width:360px; }
-  .features { margin-top:48px; display:flex; flex-direction:column; gap:20px; }
-  .feature { display:flex; align-items:flex-start; gap:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:20px 24px; }
-  .feature:hover { border-color:rgba(255,92,26,0.3); transition:border-color 0.2s; }
-  .feature-icon { width:44px; height:44px; border-radius:12px; background:rgba(255,92,26,0.12); display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
-  .feature-text h4 { font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:700; margin-bottom:4px; }
-  .feature-text p { font-size:0.82rem; color:var(--text-dim); line-height:1.5; }
-  .panel-footer { position:relative; z-index:1; }
-  .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.3rem; }
-  .logo span { color:var(--orange); }
-  .tagline { font-size:0.78rem; color:var(--text-dim); margin-top:4px; }
-  .right-panel { flex:1; display:flex; align-items:center; justify-content:center; padding:60px 80px; }
-  .form-box { width:100%; max-width:400px; }
-  .form-heading { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; letter-spacing:-0.5px; margin-bottom:8px; }
-  .form-sub { color:var(--text-dim); font-size:0.9rem; margin-bottom:40px; line-height:1.6; }
-  .form-sub a { color:var(--orange); text-decoration:none; cursor:pointer; }
-  .tabs { display:flex; background:var(--navy-soft); border-radius:14px; padding:4px; margin-bottom:36px; }
-  .tab { flex:1; padding:10px; border-radius:11px; text-align:center; font-size:0.88rem; font-weight:500; cursor:pointer; transition:all 0.25s; color:var(--text-dim); }
-  .tab.active { background:var(--orange); color:#fff; font-weight:600; }
-  .form-group { margin-bottom:20px; }
-  label { display:block; font-size:0.82rem; font-weight:500; color:rgba(255,255,255,0.7); margin-bottom:8px; }
-  input { width:100%; background:var(--navy-soft); border:1.5px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 18px; font-family:'DM Sans',sans-serif; font-size:0.95rem; color:#fff; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
-  input::placeholder { color:rgba(255,255,255,0.25); }
-  input:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,92,26,0.12); }
-  .input-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .forgot { display:block; text-align:right; font-size:0.82rem; color:var(--text-dim); text-decoration:none; margin-top:-12px; margin-bottom:24px; cursor:pointer; }
-  .forgot:hover { color:var(--orange); }
-  .submit-btn { width:100%; background:var(--orange); color:#fff; border:none; border-radius:14px; padding:16px; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.25s; }
-  .submit-btn:hover:not(:disabled) { background:var(--orange-light); transform:translateY(-2px); box-shadow:0 8px 30px rgba(255,92,26,0.35); }
-  .submit-btn:disabled { opacity:0.6; cursor:not-allowed; }
-  .error-msg { background:rgba(244,67,54,0.1); border:1px solid rgba(244,67,54,0.3); color:#F44336; padding:12px 16px; border-radius:10px; font-size:0.85rem; margin-bottom:20px; display:none; }
-  .switch-link { text-align:center; margin-top:28px; font-size:0.85rem; color:var(--text-dim); }
-  .switch-link a { color:var(--orange); text-decoration:none; font-weight:600; }
+  
+  /* Ken Burns Background Animation */
+  .bg-animation {
+    position: fixed; top: -5%; left: -5%; width: 110%; height: 110%;
+    background-image: url('https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2070&auto=format&fit=crop');
+    background-size: cover; background-position: center;
+    z-index: -2; animation: kenBurns 30s infinite alternate ease-in-out;
+  }
+  .bg-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(26,8,0,0.85) 0%, rgba(255,92,26,0.2) 100%);
+    z-index: -1;
+  }
+  @keyframes kenBurns {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.1) translate(-20px, -15px); }
+  }
+
+  /* Glassmorphism Container */
+  .glass-container {
+    background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border); border-radius: 24px;
+    padding: 40px 48px; width: 100%; max-width: 520px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    margin: 40px 20px; max-height: 90vh; overflow-y: auto;
+  }
+  .glass-container::-webkit-scrollbar { width: 6px; }
+  .glass-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+  
+  @keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .header { text-align: center; margin-bottom: 32px; }
+  .header h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; margin-bottom: 8px; letter-spacing: -1px; }
+  .header h1 span { color: var(--orange); }
+  .header p { color: rgba(255,255,255,0.7); font-size: 0.95rem; }
+
+  /* Tabs */
+  .tabs { display: flex; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 5px; margin-bottom: 32px; }
+  .tab { flex: 1; text-align: center; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.3s; color: rgba(255,255,255,0.5); }
+  .tab.active { background: var(--orange); color: #fff; box-shadow: 0 4px 15px rgba(255,92,26,0.3); }
+
+  /* Forms */
+  .form-group { margin-bottom: 20px; text-align: left; }
+  .form-group label { display: block; font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
+  .form-input {
+    width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 14px 16px; color: #fff; font-family: 'Inter', sans-serif;
+    font-size: 0.95rem; transition: all 0.3s; outline: none;
+  }
+  .form-input:focus { border-color: var(--orange); background: rgba(255,255,255,0.08); box-shadow: 0 0 0 4px rgba(255,92,26,0.15); }
+  .form-input::placeholder { color: rgba(255,255,255,0.3); }
+  
+  .submit-btn {
+    width: 100%; background: linear-gradient(135deg, var(--orange) 0%, #FF3D00 100%);
+    color: #fff; border: none; border-radius: 12px; padding: 16px;
+    font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; transition: all 0.3s; margin-top: 10px;
+    box-shadow: 0 8px 25px rgba(255,92,26,0.4);
+  }
+  .submit-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(255,92,26,0.6); }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .input-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .forgot { display:block; text-align:right; font-size:0.85rem; color:var(--orange); text-decoration:none; margin-top:-8px; margin-bottom:16px; cursor:pointer; transition: color 0.2s; }
+  .forgot:hover { color: #fff; }
+  .error-msg { background:rgba(244,67,54,0.1); border:1px solid rgba(244,67,54,0.3); color:#F44336; padding:12px 16px; border-radius:12px; font-size:0.85rem; margin-bottom:20px; display:none; }
+  .switch-link { text-align:center; margin-top:24px; font-size:0.9rem; color: rgba(255,255,255,0.6); }
+  .switch-link a { color:var(--orange); text-decoration:none; font-weight:600; transition: color 0.2s; }
+  .switch-link a:hover { color: #fff; }
   #signup-form { display:none; }
+  
+  /* OTP Elements */
+  .otp-container { display: flex; gap: 10px; justify-content: center; margin: 16px 0; }
+  .otp-input { width: 45px; height: 55px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; text-align: center; font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; outline: none; transition: border-color 0.3s; }
+  .otp-input:focus { border-color: var(--orange); background: rgba(255,255,255,0.1); }
+  .otp-input.filled { border-color: var(--orange); }
 </style>
 </head>
 <body>
 
-<div class="left-panel">
-  <a href="/index.html" class="back-link">← Back to home</a>
-  <div class="panel-content">
-    <div class="panel-badge">🏠 Customer Portal</div>
-    <h2 class="panel-title">Find Service<br>in <span class="accent">Minutes,</span><br>Not Hours.</h2>
-    <p class="panel-sub">Post a request, watch your worker live on map, and get back to your life.</p>
-    <div class="features">
-      <div class="feature"><div class="feature-icon">📍</div><div class="feature-text"><h4>Live Map Tracking</h4><p>See verified workers nearby and track them in real time.</p></div></div>
-      <div class="feature"><div class="feature-icon">🤖</div><div class="feature-text"><h4>AI Smart Matching</h4><p>Top 3 workers picked by proximity, rating, and availability.</p></div></div>
-      <div class="feature"><div class="feature-icon">⭐</div><div class="feature-text"><h4>Verified Reviews</h4><p>AI-powered fake review detection keeps ratings honest.</p></div></div>
-    </div>
+<div class="bg-animation"></div>
+<div class="bg-overlay"></div>
+
+<div class="glass-container">
+  <div class="header">
+    <h1>Servi<span>Connect</span></h1>
+    <p>Find Service in Minutes, Not Hours.</p>
   </div>
-  <div class="panel-footer">
-    <div class="logo">Servi<span>Connect</span></div>
-    <div class="tagline">Right Worker. Right Time. Right at Your Door.</div>
+
+  <div class="tabs">
+    <div class="tab active" id="tabLogin" onclick="showTab('login')">Login</div>
+    <div class="tab" id="tabSignup" onclick="showTab('signup')">Sign Up</div>
   </div>
-</div>
 
-<div class="right-panel">
-  <div class="form-box">
-    <h2 class="form-heading">Customer Login</h2>
-    <p class="form-sub">New here? <a onclick="showTab('signup')">Create a free account</a></p>
-    <div class="tabs">
-      <div class="tab active" id="tabLogin" onclick="showTab('login')">Login</div>
-      <div class="tab" id="tabSignup" onclick="showTab('signup')">Sign Up</div>
-    </div>
-
-    <!-- LOGIN FORM -->
-    <div id="login-form">
-      <div id="loginError" class="error-msg"></div>
-      
-      <!-- Step 1: Phone -->
-      <div id="loginStep1">
-        <div class="form-group">
-          <label>Phone Number</label>
-          <input type="tel" id="loginPhone" placeholder="9876543210 (demo: 9876543210)">
-        </div>
-        <a class="forgot" onclick="openForgotPassword()">Forgot Password?</a>
-        <button class="submit-btn" id="sendOtpBtn" onclick="sendLoginOTP()">Send Login OTP →</button>
-      </div>
-
-      <!-- Step 2: OTP -->
-      <div id="loginStep2" style="display:none">
-        <div class="form-group">
-          <label>Enter 6-Digit OTP</label>
-          <div class="otp-container" style="margin-bottom:20px">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="0">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="1">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="2">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="3">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="4">
-            <input type="text" class="otp-input login-otp" maxlength="1" data-index="5">
-          </div>
-        </div>
-        <button class="submit-btn" id="loginBtn" onclick="doLogin()">Verify & Login →</button>
-        <p style="text-align:center;margin-top:16px;font-size:0.85rem">
-          <a onclick="showLoginStep(1)" style="color:var(--orange);cursor:pointer">← Change Phone Number</a>
-        </p>
-      </div>
-      
-      <p style="font-size:0.78rem;color:var(--text-dim);text-align:center;margin-top:14px">Demo: phone <strong style="color:#fff">9876543210</strong></p>
-    </div>
-
-    <!-- SIGNUP FORM -->
-    <div id="signup-form">
-      <div id="signupError" class="error-msg"></div>
-      <div class="input-row">
-        <div class="form-group"><label>First Name</label><input type="text" id="regFirst" placeholder="Ravi"></div>
-        <div class="form-group"><label>Last Name</label><input type="text" id="regLast" placeholder="Kumar"></div>
-      </div>
-      <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="ravi@example.com"></div>
-      
+  <!-- LOGIN FORM -->
+  <div id="login-form">
+    <div id="loginError" class="error-msg"></div>
+    
+    <!-- Step 1: Phone -->
+    <div id="loginStep1">
       <div class="form-group">
         <label>Phone Number</label>
-        <div style="display:flex;gap:10px">
-          <input type="tel" id="regPhone" placeholder="9876543210" style="flex:1">
-          <button type="button" class="btn btn-teal btn-sm" id="regOtpBtn" onclick="sendRegOTP()" style="border-radius:12px;white-space:nowrap">Send OTP</button>
-        </div>
+        <input type="tel" id="loginPhone" class="form-input" placeholder="9876543210 (demo: 9876543210)">
       </div>
-
-      <div class="form-group">
-        <label>Verification Code (OTP)</label>
-        <div class="otp-container" style="justify-content:flex-start;gap:8px;margin:10px 0">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="0" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="1" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="2" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="3" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="4" style="width:42px;height:48px;font-size:1.1rem">
-          <input type="text" class="otp-input reg-otp" maxlength="1" data-index="5" style="width:42px;height:48px;font-size:1.1rem">
-        </div>
-      </div>
-
-      <div class="form-group"><label>City</label><input type="text" id="regCity" placeholder="Hyderabad, Chennai…"></div>
-      <div class="form-group"><label>Password</label><input type="password" id="regPass" placeholder="Create a strong password"></div>
-      <button class="submit-btn" id="signupBtn" onclick="doSignup()">Create Account →</button>
+      <a class="forgot" onclick="openForgotPassword()">Forgot Password?</a>
+      <button class="submit-btn" id="sendOtpBtn" onclick="sendLoginOTP()">Continue →</button>
+      <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);text-align:center;margin-top:20px">Demo: phone <strong style="color:#fff">9876543210</strong></p>
     </div>
 
-    <div class="switch-link">Are you a worker? <a href="/pages/worker-login.html">Worker Login →</a></div>
+    <!-- Step 2: OTP -->
+    <div id="loginStep2" style="display:none">
+      <div class="form-group">
+        <label style="text-align:center">Enter 6-Digit OTP</label>
+        <div class="otp-container">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="0">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="1">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="2">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="3">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="4">
+          <input type="text" class="otp-input login-otp" maxlength="1" data-index="5">
+        </div>
+      </div>
+      <button class="submit-btn" id="loginBtn" onclick="doLogin()">Verify & Login →</button>
+      <p style="text-align:center;margin-top:20px;font-size:0.9rem">
+        <a onclick="showLoginStep(1)" style="color:var(--orange);cursor:pointer">← Change Phone Number</a>
+      </p>
+    </div>
   </div>
+
+  <!-- SIGNUP FORM -->
+  <div id="signup-form">
+    <div id="signupError" class="error-msg"></div>
+    
+    <div class="input-row">
+      <div class="form-group"><label>First Name</label><input type="text" id="regFirst" class="form-input" placeholder="Ravi"></div>
+      <div class="form-group"><label>Last Name</label><input type="text" id="regLast" class="form-input" placeholder="Kumar"></div>
+    </div>
+    
+    <div class="form-group"><label>Email</label><input type="email" id="regEmail" class="form-input" placeholder="ravi@example.com"></div>
+    
+    <div class="form-group">
+      <label>Phone Number</label>
+      <div style="display:flex;gap:10px">
+        <input type="tel" id="regPhone" class="form-input" placeholder="9876543210" style="flex:1">
+        <button type="button" class="submit-btn" id="regOtpBtn" onclick="sendRegOTP()" style="width:auto;padding:14px 20px;margin-top:0;font-size:0.9rem">Send OTP</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Verification Code (OTP)</label>
+      <div class="otp-container" style="justify-content:flex-start;gap:8px;margin:10px 0">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="0" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="1" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="2" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="3" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="4" style="width:40px;height:48px;font-size:1.1rem">
+        <input type="text" class="otp-input reg-otp" maxlength="1" data-index="5" style="width:40px;height:48px;font-size:1.1rem">
+      </div>
+    </div>
+
+    <div class="form-group"><label>City</label><input type="text" id="regCity" class="form-input" placeholder="Hyderabad, Chennai…"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="regPass" class="form-input" placeholder="Create a strong password"></div>
+    
+    <button class="submit-btn" id="signupBtn" onclick="doSignup()">Create Account →</button>
+  </div>
+
+  <div class="switch-link">Are you a worker? <a href="/pages/worker-login.html">Worker Login →</a></div>
 </div>
 
 <!-- FORGOT PASSWORD MODAL -->
+<style>
+/* Inline fallback for modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #1a0800; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 36px; width: 100%; max-width: 420px; animation: modalIn 0.3s ease; }
+@keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+.modal-title { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; margin-bottom: 24px; color: #fff; }
+.otp-step { display: none; }
+.otp-step.active { display: block; }
+.otp-step-indicator { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
+.otp-step-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: all 0.3s; }
+.otp-step-dot.active { background: var(--orange); box-shadow: 0 0 10px rgba(255,92,26,0.4); }
+</style>
+
 <div class="modal-overlay" id="forgotModal">
-  <div class="modal" style="max-width:420px">
+  <div class="modal">
     <div class="modal-title">🔐 Reset Password</div>
     <div class="otp-step-indicator">
       <div class="otp-step-dot active" id="stepDot1"></div>
@@ -171,14 +212,14 @@
 
     <!-- Step 1: Enter Phone -->
     <div class="otp-step active" id="otpStep1">
-      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:20px">Enter your registered phone number to receive a 6-digit OTP.</p>
+      <p style="font-size:0.9rem;color:rgba(255,255,255,0.6);margin-bottom:20px">Enter your registered phone number to receive a 6-digit OTP.</p>
       <div class="form-group"><label>Phone Number</label><input type="tel" id="resetPhone" placeholder="9876543210" class="form-input"></div>
       <button class="submit-btn" onclick="sendOTP()">Send OTP →</button>
     </div>
 
     <!-- Step 2: Enter OTP -->
     <div class="otp-step" id="otpStep2">
-      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:12px">Enter the 6-digit code sent to your phone.</p>
+      <p style="font-size:0.9rem;color:rgba(255,255,255,0.6);margin-bottom:12px;text-align:center">Enter the 6-digit code sent to your phone.</p>
       <div class="otp-container">
         <input type="text" class="otp-input" maxlength="1" data-index="0">
         <input type="text" class="otp-input" maxlength="1" data-index="1">
@@ -187,19 +228,19 @@
         <input type="text" class="otp-input" maxlength="1" data-index="4">
         <input type="text" class="otp-input" maxlength="1" data-index="5">
       </div>
-      <div class="otp-timer" id="otpTimer">Code expires in <strong>5:00</strong></div>
-      <button class="submit-btn" style="margin-top:20px" onclick="verifyOTP()">Verify OTP →</button>
+      <div style="text-align:center;font-size:0.85rem;color:rgba(255,255,255,0.5);margin-bottom:20px" id="otpTimer">Code expires in <strong style="color:var(--orange)">5:00</strong></div>
+      <button class="submit-btn" onclick="verifyOTP()">Verify OTP →</button>
     </div>
 
     <!-- Step 3: New Password -->
     <div class="otp-step" id="otpStep3">
-      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:20px">Create your new password.</p>
+      <p style="font-size:0.9rem;color:rgba(255,255,255,0.6);margin-bottom:20px">Create your new password.</p>
       <div class="form-group"><label>New Password</label><input type="password" id="newPass" placeholder="Min 6 characters" class="form-input"></div>
       <div class="form-group"><label>Confirm Password</label><input type="password" id="confirmPass" placeholder="Re-enter password" class="form-input"></div>
       <button class="submit-btn" onclick="resetPassword()">Reset Password →</button>
     </div>
 
-    <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:16px" onclick="closeForgotModal()">Cancel</button>
+    <button class="submit-btn" style="background:rgba(255,255,255,0.05);color:white;box-shadow:none;margin-top:16px" onclick="closeForgotModal()">Cancel</button>
   </div>
 </div>
 
@@ -269,7 +310,7 @@ function startOTPTimer() {
     seconds--;
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    el.innerHTML = `Code expires in <strong>${m}:${s.toString().padStart(2, '0')}</strong>`;
+    el.innerHTML = `Code expires in <strong style="color:var(--orange)">${m}:${s.toString().padStart(2, '0')}</strong>`;
     if (seconds <= 0) {
       clearInterval(otpTimerInterval);
       el.innerHTML = '<strong style="color:#F44336">OTP expired. Please request a new one.</strong>';
@@ -278,7 +319,7 @@ function startOTPTimer() {
 }
 
 function setupOTPInputs() {
-  const inputs = document.querySelectorAll('.otp-input');
+  const inputs = document.querySelectorAll('#forgotModal .otp-input');
   inputs.forEach((inp, i) => {
     inp.value = '';
     inp.addEventListener('input', (e) => {
@@ -294,7 +335,7 @@ function setupOTPInputs() {
 
 async function verifyOTP() {
   const phone = document.getElementById('resetPhone').value.trim();
-  const otp = [...document.querySelectorAll('.otp-input')].map(i => i.value).join('');
+  const otp = [...document.querySelectorAll('#forgotModal .otp-input')].map(i => i.value).join('');
   if (otp.length !== 6) { showToast('Please enter all 6 digits.', 'error'); return; }
 
   const { ok, data } = await AuthAPI.verifyOTP(phone, otp, 'customer');
@@ -353,7 +394,7 @@ async function sendLoginOTP() {
   btn.disabled = true; btn.textContent = 'Sending OTP…';
   
   const { ok, data } = await AuthAPI.sendLoginOTP(phone, 'customer');
-  btn.disabled = false; btn.textContent = 'Send Login OTP →';
+  btn.disabled = false; btn.textContent = 'Continue →';
 
   if (ok) {
     showToast('✅ OTP sent! Check your phone (or console in dev).');
@@ -454,6 +495,11 @@ document.addEventListener('keydown', e => {
     else doSignup();
   }
 });
+
+// Fallback toast function in case shared.css/js isn't loaded properly
+window.showToast = window.showToast || function(msg, type='success') {
+  alert((type === 'error' ? '❌ Error: ' : 'ℹ️ ') + msg);
+};
 </script>
 </body>
 </html>
