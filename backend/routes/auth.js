@@ -38,8 +38,13 @@ router.post('/register/send-otp', async (req, res, next) => {
     await db.PasswordResetToken.create({ phone, role, otp, expiresAt });
     
     await sendOTP(phone, otp, 'registration');
+    
+    const response = { success: true, message: 'Verification code sent successfully.' };
+    if (process.env.SMS_ENABLED !== 'true') {
+      response._devOtp = otp;
+    }
 
-    res.json({ success: true, message: 'Verification code sent successfully.' });
+    res.json(response);
   } catch (err) { next(err); }
 });
 
@@ -95,8 +100,13 @@ router.post('/login/send-otp', async (req, res, next) => {
     await db.PasswordResetToken.create({ phone, role, otp, expiresAt });
     
     await sendOTP(phone, otp, 'login');
+    
+    const response = { success: true, message: 'OTP sent successfully. Check console or phone.' };
+    if (process.env.SMS_ENABLED !== 'true') {
+      response._devOtp = otp;
+    }
 
-    res.json({ success: true, message: 'OTP sent successfully. Check console or phone.' });
+    res.json(response);
   } catch (err) { next(err); }
 });
 

@@ -397,7 +397,8 @@ async function sendLoginOTP() {
   btn.disabled = false; btn.textContent = 'Continue →';
 
   if (ok) {
-    showToast('✅ OTP sent! Check your phone (or console in dev).');
+    showToast('✅ OTP sent! Check your phone.');
+    if (data._devOtp) showToast(`[DEV] OTP: ${data._devOtp}`, 'info');
     showLoginStep(2);
   } else {
     showError('loginError', data.message || 'Failed to send OTP.');
@@ -439,6 +440,7 @@ async function sendRegOTP() {
 
   if (ok) {
     showToast('✅ Verification code sent! Check your phone.');
+    if (data._devOtp) showToast(`[DEV] Code: ${data._devOtp}`, 'info');
     setupRegOTPInputs();
   } else {
     showError('signupError', data.message || 'Failed to send verification code.');
