@@ -346,7 +346,6 @@ function renderActiveJob(jobs) {
   if (j.customerLat && j.customerLng) {
     setTimeout(() => {
       const cPos = [j.customerLat, j.customerLng];
-      const wPos = workerData.lat && workerData.lng ? [workerData.lat, workerData.lng] : null;
 
       if (!jobMap) {
         jobMap = L.map('jobMap').setView(cPos, 14);
@@ -356,31 +355,33 @@ function renderActiveJob(jobs) {
       } else {
         jobMap.setView(cPos, 14);
       }
-      
+
       // Clear existing markers and routes
       if (jobMarker) jobMap.removeLayer(jobMarker);
       if (window.workerMarker) jobMap.removeLayer(window.workerMarker);
       if (window.jobRouteControl) { jobMap.removeControl(window.jobRouteControl); window.jobRouteControl = null; }
 
-      // Customer Marker (red/coral)
+      // Customer Marker (coral/red)
       jobMarker = L.marker(cPos, {
         icon: L.divIcon({
-          html: '<div style="background:#E85D75;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 12px rgba(232,93,117,0.6)"></div>',
-          className: 'customer-loc-icon', iconSize: [16,16], iconAnchor: [8,8]
+          html: '<div style="background:#E85D75;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 14px rgba(232,93,117,0.7)"></div>',
+          className: '', iconSize: [18,18], iconAnchor: [9,9]
         })
       }).bindPopup(`<b>📍 Customer: ${j.customerName}</b><br>${j.address || ''}`).addTo(jobMap);
-      
-      // Worker Marker (Self - cyan)
-      if (wPos) {
+
+      // Get worker's REAL live GPS position
+      const drawWorkerAndRoute = (wPos) => {
+        if (!wPos) { jobMarker.openPopup(); return; }
+        if (window.workerMarker) jobMap.removeLayer(window.workerMarker);
         window.workerMarker = L.marker(wPos, {
           icon: L.divIcon({
-            html: '<div style="background:#00D4FF;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 12px rgba(0,212,255,0.6)"></div>',
-            className: 'worker-marker', iconSize: [14,14], iconAnchor: [7,7]
+            html: '<div style="background:#00D4FF;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 14px rgba(0,212,255,0.8)"></div>',
+            className: '', iconSize: [16,16], iconAnchor: [8,8]
           })
-        }).bindPopup('<b>You are here</b>').addTo(jobMap);
-        
-        // Show route between worker and customer
+        }).bindPopup('<b>📍 You are here</b>').addTo(jobMap).openPopup();
+
         try {
+          if (window.jobRouteControl) { jobMap.removeControl(window.jobRouteControl); }
           window.jobRouteControl = L.Routing.control({
             waypoints: [L.latLng(wPos[0], wPos[1]), L.latLng(cPos[0], cPos[1])],
             routeWhileDragging: false, addWaypoints: false,
@@ -388,11 +389,17 @@ function renderActiveJob(jobs) {
             createMarker: () => null
           }).addTo(jobMap);
         } catch(e) { console.warn('Routing failed:', e); }
-        
-        const bounds = L.latLngBounds([cPos, wPos]);
-        jobMap.fitBounds(bounds, { padding: [40, 40] });
+
+        try { jobMap.fitBounds(L.latLngBounds([cPos, wPos]), { padding: [40, 40] }); } catch(e) {}
+      };
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => drawWorkerAndRoute([pos.coords.latitude, pos.coords.longitude]),
+          ()  => drawWorkerAndRoute(workerData.lat && workerData.lng ? [workerData.lat, workerData.lng] : null)
+        );
       } else {
-        jobMarker.openPopup();
+        drawWorkerAndRoute(workerData.lat && workerData.lng ? [workerData.lat, workerData.lng] : null);
       }
     }, 200);
   }

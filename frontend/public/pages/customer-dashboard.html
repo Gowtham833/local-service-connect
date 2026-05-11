@@ -54,7 +54,7 @@
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-value" id="statTotal">—</div><div class="stat-label">Total Bookings</div></div>
         <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="statCompleted">—</div><div class="stat-label">Completed</div></div>
-        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="statActive">—</div><div class="stat-label">Active / Pending</div></div>
+        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="statActive">—</div><div class="stat-label">Active</div></div>
         <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="statSpent">—</div><div class="stat-label">Total Spent</div></div>
       </div>
 
@@ -190,19 +190,26 @@
 
 <!-- RATE MODAL -->
 <div class="modal-overlay" id="rateModal">
-  <div class="modal">
+  <div class="modal" style="max-width:440px">
     <div class="modal-title">⭐ Rate this Service</div>
     <input type="hidden" id="rateBookingId">
     <div class="form-group">
-      <label class="form-label">Rating (1–5)</label>
-      <input class="form-input" type="number" id="ratingValue" min="1" max="5" placeholder="5">
+      <label class="form-label">Your Rating</label>
+      <div id="starRating" style="display:flex;gap:6px;margin-top:10px">
+        <span class="rate-star" onclick="setRating(1)" onmouseover="hoverRating(1)" onmouseout="resetHover()" style="font-size:2.6rem;color:rgba(255,255,255,0.15);cursor:pointer;transition:all 0.15s;line-height:1">★</span>
+        <span class="rate-star" onclick="setRating(2)" onmouseover="hoverRating(2)" onmouseout="resetHover()" style="font-size:2.6rem;color:rgba(255,255,255,0.15);cursor:pointer;transition:all 0.15s;line-height:1">★</span>
+        <span class="rate-star" onclick="setRating(3)" onmouseover="hoverRating(3)" onmouseout="resetHover()" style="font-size:2.6rem;color:rgba(255,255,255,0.15);cursor:pointer;transition:all 0.15s;line-height:1">★</span>
+        <span class="rate-star" onclick="setRating(4)" onmouseover="hoverRating(4)" onmouseout="resetHover()" style="font-size:2.6rem;color:rgba(255,255,255,0.15);cursor:pointer;transition:all 0.15s;line-height:1">★</span>
+        <span class="rate-star" onclick="setRating(5)" onmouseover="hoverRating(5)" onmouseout="resetHover()" style="font-size:2.6rem;color:rgba(255,255,255,0.15);cursor:pointer;transition:all 0.15s;line-height:1">★</span>
+      </div>
+      <div id="ratingLabel" style="font-size:0.9rem;color:var(--text-dim);margin-top:8px;min-height:20px">Tap a star to rate</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Your Review</label>
-      <textarea class="form-textarea" id="ratingReview" placeholder="How was the service?"></textarea>
+      <label class="form-label">Write a Review</label>
+      <textarea class="form-textarea" id="ratingReview" placeholder="Tell others about the quality, punctuality, and behavior…"></textarea>
     </div>
     <div style="display:flex;gap:12px">
-      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="submitRating()">Submit</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="submitRating()">✅ Submit Rating</button>
       <button class="btn btn-ghost" onclick="closeModal('rateModal')">Cancel</button>
     </div>
   </div>
@@ -238,31 +245,68 @@ function showPage(name) {
 
 function initWorkerMap() {
   if (workerMap) return;
-  workerMap = L.map('workerMap').setView([17.3850, 78.4867], 11); // Hyderabad default
+  workerMap = L.map('workerMap').setView([17.3850, 78.4867], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
   }).addTo(workerMap);
+  // Center on real customer GPS and add a "You are here" pin
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      workerMap.setView([latitude, longitude], 13);
+      if (customerData) { customerData.lat = latitude; customerData.lng = longitude; }
+      if (window.customerSelfMarker) workerMap.removeLayer(window.customerSelfMarker);
+      window.customerSelfMarker = L.marker([latitude, longitude], {
+        icon: L.divIcon({
+          html: '<div style="background:#8B5CF6;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 14px rgba(139,92,246,0.9)"></div>',
+          className: '', iconSize: [18,18], iconAnchor: [9,9]
+        })
+      }).bindPopup('<b>📍 Your Location</b>').addTo(workerMap).openPopup();
+    }, () => {});
+  }
 }
 
 function updateMapMarkers(workers) {
   if (!workerMap) return;
   mapMarkers.forEach(m => workerMap.removeLayer(m));
   mapMarkers = [];
-  
-  if (!workers.length) return;
-  
+
   const bounds = L.latLngBounds();
+
+  // Add customer's own location to map
+  const cLat = customerData?.lat, cLng = customerData?.lng;
+  if (cLat && cLng) {
+    if (window.customerSelfMarker) workerMap.removeLayer(window.customerSelfMarker);
+    window.customerSelfMarker = L.marker([cLat, cLng], {
+      icon: L.divIcon({
+        html: '<div style="background:#8B5CF6;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 14px rgba(139,92,246,0.9)"></div>',
+        className: '', iconSize: [18,18], iconAnchor: [9,9]
+      })
+    }).bindPopup('<b>📍 Your Location</b>').addTo(workerMap);
+    bounds.extend([cLat, cLng]);
+  }
+
+  if (!workers.length) {
+    if (cLat && cLng) workerMap.setView([cLat, cLng], 13);
+    return;
+  }
+
   workers.forEach(w => {
     if (w.lat && w.lng) {
-      const m = L.marker([w.lat, w.lng])
-        .bindPopup(`<b>${w.firstName} ${w.lastName}</b><br>${w.skills.join(', ')}`)
-        .addTo(workerMap);
+      const m = L.marker([w.lat, w.lng], {
+        icon: L.divIcon({
+          html: '<div style="background:#00D4FF;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 10px rgba(0,212,255,0.7)"></div>',
+          className: '', iconSize: [14,14], iconAnchor: [7,7]
+        })
+      }).bindPopup(`<b>👷 ${w.firstName} ${w.lastName}</b><br>⭐ ${w.rating||'New'} · ${(w.skills||[]).join(', ')}<br><span style="color:#00D4FF">🟢 Online</span><br>📞 ${w.phone||''}`).addTo(workerMap);
       mapMarkers.push(m);
       bounds.extend([w.lat, w.lng]);
     }
   });
-  
-  if (mapMarkers.length) workerMap.fitBounds(bounds, { padding: [30, 30] });
+
+  if (mapMarkers.length || (cLat && cLng)) {
+    try { workerMap.fitBounds(bounds, { padding: [40, 40] }); } catch(e) {}
+  }
 }
 
 // ── Load dashboard ────────────────────────────────────────────
@@ -346,8 +390,8 @@ function renderRecentBookings(bookings) {
             <td>${b.price ? formatCurrency(b.price) : '—'}</td>
             <td>${statusBadge(b.status)}</td>
             <td>
-              ${b.status === 'completed' && !b.rating ? `<button class="btn btn-ghost btn-sm" onclick="openRateModal('${b.id}')">⭐ Rate</button>` : b.rating ? `⭐ ${b.rating}/5` : ''}
-              ${b.status === 'active' ? `<button class="btn btn-teal btn-sm" onclick="startTrackingWorker('${b.id}')">📍 Track</button>` : ''}
+              ${b.reviewEnabled ? `<button class="btn btn-ghost btn-sm" onclick="openRateModal('${b.id}')">⭐ Rate</button>` : b.rating ? `⭐ ${b.rating}/5` : b.status === 'completed' ? '<span style="font-size:0.75rem;color:var(--text-dim)">Awaiting proof</span>' : ''}
+              ${(b.status === 'accepted' || b.status === 'in_progress') ? `<button class="btn btn-teal btn-sm" onclick="startTrackingWorker('${b.id}')">📍 Track</button>` : ''}
             </td>
           </tr>`).join('')}
       </tbody>
@@ -386,7 +430,7 @@ async function loadAllBookings() {
             <td>${b.workerName ? `<div>${b.workerName}</div><div style="font-size:0.75rem;color:var(--teal);margin-top:2px;font-weight:600">📞 ${b.workerPhone || 'N/A'}</div>` : '—'}</td>
             <td>${statusBadge(b.status)}</td>
             <td>${formatCurrency(b.price)}</td>
-            <td>${b.status === 'completed' && !b.rating ? `<button class="btn btn-ghost btn-sm" onclick="openRateModal('${b.id}')">⭐ Rate</button>` : b.rating ? `⭐ ${b.rating}/5` : '—'}</td>
+            <td>${b.reviewEnabled ? `<button class="btn btn-ghost btn-sm" onclick="openRateModal('${b.id}')">⭐ Rate</button>` : b.review ? `⭐ ${b.review.rating}/5` : b.status === 'completed' ? '<span style="font-size:0.75rem;color:var(--text-dim)">Awaiting proof</span>' : '—'}</td>
             <td>${(b.status === 'accepted' || b.status === 'in_progress') ? `<button class="btn btn-primary btn-sm" onclick="startTrackingWorker('${b.id}')">📍 Track</button>` : '—'}</td>
           </tr>`).join('')}
       </tbody>
@@ -487,23 +531,44 @@ function renderProfile() {
   document.getElementById('profileSince').textContent = formatDate(customerData.createdAt);
 }
 
+let selectedRating = 0;
+const ratingLabels = ['', '😞 Poor', '😐 Fair', '😊 Good', '😃 Very Good', '🌟 Excellent!'];
+
+function setRating(val) {
+  selectedRating = val;
+  document.querySelectorAll('.rate-star').forEach((s, i) => {
+    s.style.color = i < val ? '#FBBF24' : 'rgba(255,255,255,0.15)';
+    s.style.transform = i < val ? 'scale(1.15)' : 'scale(1)';
+  });
+  document.getElementById('ratingLabel').textContent = ratingLabels[val] || '';
+}
+function hoverRating(val) {
+  document.querySelectorAll('.rate-star').forEach((s, i) => {
+    s.style.color = i < val ? '#FCD34D' : 'rgba(255,255,255,0.15)';
+  });
+}
+function resetHover() { setRating(selectedRating); }
+
 function openRateModal(bookingId) {
+  selectedRating = 0;
   document.getElementById('rateBookingId').value = bookingId;
+  document.getElementById('ratingReview').value = '';
+  document.getElementById('ratingLabel').textContent = 'Tap a star to rate';
+  document.querySelectorAll('.rate-star').forEach(s => { s.style.color = 'rgba(255,255,255,0.15)'; s.style.transform = 'scale(1)'; });
   document.getElementById('rateModal').classList.add('open');
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 async function submitRating() {
-  const id     = document.getElementById('rateBookingId').value;
-  const rating = parseInt(document.getElementById('ratingValue').value);
+  const id = document.getElementById('rateBookingId').value;
+  if (!selectedRating || selectedRating < 1) { showToast('Please select a star rating (1–5).', 'error'); return; }
   const review = document.getElementById('ratingReview').value;
-  if (!rating || rating < 1 || rating > 5) { showToast('Enter a rating from 1 to 5', 'error'); return; }
-
-  const { ok, data } = await CustomerAPI.rateBooking(id, rating, review);
+  const { ok, data } = await CustomerAPI.rateBooking(id, selectedRating, review);
   if (ok) {
     showToast('⭐ Rating submitted! Thank you.');
     closeModal('rateModal');
+    selectedRating = 0;
     loadDashboard();
   } else {
     showToast(data.message || 'Could not submit rating.', 'error');
@@ -587,7 +652,15 @@ async function startTrackingWorker(bookingId) {
       }
     };
 
-    updateMap(customerData?.lat, customerData?.lng);
+    // Use real GPS for customer position on map
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => { if (customerData) { customerData.lat = pos.coords.latitude; customerData.lng = pos.coords.longitude; } updateMap(pos.coords.latitude, pos.coords.longitude); },
+        ()  => updateMap(customerData?.lat, customerData?.lng)
+      );
+    } else {
+      updateMap(customerData?.lat, customerData?.lng);
+    }
   };
 
   fetchTracking();

@@ -58,18 +58,63 @@ async function getChatbotResponse(message, history = []) {
   // 2. Try to enrich with live DB data if asking about workers
   let contextAddon = '';
   const lowerMsg = message.toLowerCase();
-  if (lowerMsg.includes('best') || lowerMsg.includes('suggest') || lowerMsg.includes('recommend') || lowerMsg.includes('worker')) {
+  const isWorkerQuery = lowerMsg.includes('best') || lowerMsg.includes('suggest') || lowerMsg.includes('recommend') ||
+    lowerMsg.includes('worker') || lowerMsg.includes('plumber') || lowerMsg.includes('electrician') ||
+    lowerMsg.includes('cleaner') || lowerMsg.includes('carpenter') || lowerMsg.includes('ac') ||
+    lowerMsg.includes('painter') || lowerMsg.includes('near') || lowerMsg.includes('top');
+
+  if (isWorkerQuery) {
     try {
       const { db } = require('../models/index');
+
+      // Detect which service is being asked about
+      const serviceMap = {
+        'plumb': 'Plumbing', 'electr': 'Electrical', 'clean': 'Cleaning',
+        'paint': 'Painting', 'carp': 'Carpentry', 'ac': 'AC Service',
+        'water': 'Water Tanker', 'medic': 'Medical Help', 'nurse': 'Medical Help'
+      };
+      let filterService = null;
+      for (const [kw, svc] of Object.entries(serviceMap)) {
+        if (lowerMsg.includes(kw)) { filterService = svc; break; }
+      }
+
+      const where = { isVerified: true };
+      // Show online workers first, but include offline too for suggestions
+
       const workers = await db.Worker.findAll({
-        where: { isAvailable: true, isVerified: true },
-        attributes: ['firstName', 'lastName', 'skills', 'rating', 'experience', 'city'],
-        limit: 10,
-        order: [['rating', 'DESC']]
+        where,
+        attributes: ['firstName', 'lastName', 'skills', 'rating', 'experience', 'city', 'phone', 'isAvailable', 'totalJobs'],
+        order: [['rating', 'DESC NULLS LAST'], ['isAvailable', 'DESC']],
+        limit: 12
       });
-      if (workers.length > 0) {
-        contextAddon = `\n\nCurrently available top workers:\n` +
-          workers.map(w => `- ${w.firstName} ${w.lastName}: Skills=[${(w.skills||[]).join(', ')}], Rating=${w.rating}/5, City=${w.city}, Exp=${w.experience || 'N/A'}`).join('\n');
+
+      // Filter by service if detected
+      let relevant = filterService
+        ? workers.filter(w => (w.skills || []).includes(filterService))
+        : workers;
+
+      if (relevant.length === 0) relevant = workers; // fallback to all
+
+      // Also fetch their latest review
+      const workerIds = relevant.slice(0, 8).map(w => w.id);
+      let reviewMap = {};
+      try {
+        const reviews = await db.Review.findAll({
+          where: { workerId: workerIds },
+          order: [['createdAt', 'DESC']],
+          attributes: ['workerId', 'comment', 'rating']
+        });
+        reviews.forEach(r => { if (!reviewMap[r.workerId]) reviewMap[r.workerId] = r; });
+      } catch(e) {}
+
+      if (relevant.length > 0) {
+        contextAddon = `\n\nVerified workers${filterService ? ` for ${filterService}` : ''} (sorted by rating):\n` +
+          relevant.slice(0, 8).map(w => {
+            const status = w.isAvailable ? '🟢 Online' : '⚫ Offline';
+            const rev = reviewMap[w.id];
+            const reviewSnippet = rev ? ` | Latest review: "${rev.comment.substring(0, 60)}"` : '';
+            return `- ${w.firstName} ${w.lastName} | Skills: ${(w.skills||[]).join(', ')} | Rating: ${w.rating||'New'}/5 | ${w.experience||'N/A'} exp | City: ${w.city} | 📞 ${w.phone} | ${status}${reviewSnippet}`;
+          }).join('\n');
       }
     } catch (e) { /* skip DB enrichment if it fails */ }
   }
@@ -82,6 +127,7 @@ You help with: booking services, checking status, pricing (₹300–₹3000 rang
 Services: Plumbing, Electrical, Cleaning, AC Service, Carpentry, Painting, Water Tanker, Medical Help.
 Cities: Hyderabad, Chennai, Bangalore, Mumbai, Delhi, Pune, Kolkata, Ahmedabad, Jaipur, Lucknow.
 Support: support@serviconnect.in | +91-1800-123-4567
+IMPORTANT: When suggesting or recommending workers, ALWAYS include their phone number, rating, city, online/offline status, and any recent review snippet from the context below. Format recommendations clearly with each worker on a new line.
 Keep responses concise, friendly, and helpful. If out of scope, refer to support.${contextAddon}`;
 
     const conversationHistory = history.slice(-6);
