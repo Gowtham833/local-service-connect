@@ -5,20 +5,32 @@
  */
 const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
 
-const IS_PROD = process.env.NODE_ENV === 'production';
 const SMS_ENABLED = process.env.SMS_ENABLED === 'true';
-const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
+const AWS_REGION = process.env.AWS_REGION || 'ap-south-1';
 
-const snsClient = new SNSClient({ region: AWS_REGION });
+let snsClient = null;
+try {
+  snsClient = new SNSClient({ region: AWS_REGION });
+} catch (err) {
+  console.error('[SMS] Failed to create SNS client:', err.message);
+}
 
 /**
  * Format phone number to E.164 format (+91XXXXXXXXXX)
  */
 function formatPhone(phone) {
-  let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  if (!phone) return '';
+  let cleaned = phone.toString().replace(/[\s\-\(\)\.]/g, '');
+  // Already E.164
+  if (cleaned.startsWith('+91') && cleaned.length === 13) return cleaned;
   if (cleaned.startsWith('+')) return cleaned;
+  // Remove leading 0
+  if (cleaned.startsWith('0')) cleaned = cleaned.substring(1);
+  // Has country code without +
   if (cleaned.startsWith('91') && cleaned.length === 12) return '+' + cleaned;
+  // 10-digit Indian number
   if (cleaned.length === 10) return '+91' + cleaned;
+  // Fallback: assume Indian
   return '+91' + cleaned;
 }
 
@@ -38,26 +50,25 @@ async function sendOTP(phone, otp, purpose = 'verification') {
   console.log(`===========================================\n`);
 
   // Send real SMS only if enabled
-  if (SMS_ENABLED) {
+  if (SMS_ENABLED && snsClient) {
     try {
-      const result = await snsClient.send(new PublishCommand({
+      const params = {
         PhoneNumber: formattedPhone,
         Message: message,
         MessageAttributes: {
           'AWS.SNS.SMS.SMSType': {
             DataType: 'String',
-            StringValue: 'Transactional', // High-priority delivery
-          },
-          'AWS.SNS.SMS.SenderID': {
-            DataType: 'String',
-            StringValue: 'ServiCon', // Max 11 chars for sender ID
+            StringValue: 'Transactional',
           },
         },
-      }));
+      };
+
+      const result = await snsClient.send(new PublishCommand(params));
       console.log(`[SMS] ✅ Sent to ${formattedPhone} — MessageId: ${result.MessageId}`);
       return { success: true, messageId: result.MessageId };
     } catch (err) {
       console.error(`[SMS] ❌ Failed to send to ${formattedPhone}:`, err.message);
+      console.error(`[SMS] Error Code: ${err.name}, Region: ${AWS_REGION}`);
       // Don't throw — OTP is already saved in DB, user can still check console in dev
       return { success: false, error: err.message };
     }

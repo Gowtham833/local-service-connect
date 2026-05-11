@@ -152,7 +152,7 @@ router.post('/worker/register', registerValidation, async (req, res, next) => {
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
     const { firstName, lastName, email, phone, city, skills, experience, password,
-            liveSelfie, aadhaarFront, aadhaarBack, aadhaarNumber, otp } = req.body;
+            aadhaarFront, aadhaarBack, aadhaarNumber, otp } = req.body;
 
     // Verify OTP
     const tokenRecord = await db.PasswordResetToken.findOne({
@@ -173,50 +173,43 @@ router.post('/worker/register', registerValidation, async (req, res, next) => {
     const skillsArr = Array.isArray(skills) ? skills : (skills ? [skills] : []);
 
     // Save verification images if provided
-    let liveSelfieImageUrl = null;
     let aadhaarFrontImageUrl = null;
     let aadhaarBackImageUrl = null;
-    let profilePhotoUrl = null;
     let verificationStatus = 'pending';
-    let faceMatchConfidence = null;
 
-    if (liveSelfie) {
-      liveSelfieImageUrl = saveBase64Image(liveSelfie, 'selfies', phone);
-      profilePhotoUrl = liveSelfieImageUrl; // Use selfie as profile photo
-    }
-    if (aadhaarFront) {
-      aadhaarFrontImageUrl = saveBase64Image(aadhaarFront, 'aadhaar', `${phone}_front`);
-    }
-    if (aadhaarBack) {
-      aadhaarBackImageUrl = saveBase64Image(aadhaarBack, 'aadhaar', `${phone}_back`);
-    }
-
-    // Run face match if both selfie and aadhaar front are provided
-    if (liveSelfieImageUrl && aadhaarFrontImageUrl) {
-      try {
-        const faceResult = await compareFaces(liveSelfieImageUrl, aadhaarFrontImageUrl);
-        faceMatchConfidence = faceResult.confidence;
-        if (faceResult.match) {
-          verificationStatus = 'verified';
-        } else {
-          verificationStatus = 'pending'; // Admin will review
-        }
-      } catch (faceErr) {
-        console.error('[FaceMatch] Error:', faceErr.message);
-        verificationStatus = 'pending';
+    try {
+      if (aadhaarFront && aadhaarFront.length > 100) {
+        aadhaarFrontImageUrl = saveBase64Image(aadhaarFront, 'aadhaar', `${phone}_front`);
       }
+    } catch (uploadErr) {
+      console.error('[Upload] Aadhaar front upload error:', uploadErr.message);
     }
 
-    const isVerified = verificationStatus === 'verified';
+    try {
+      if (aadhaarBack && aadhaarBack.length > 100) {
+        aadhaarBackImageUrl = saveBase64Image(aadhaarBack, 'aadhaar', `${phone}_back`);
+      }
+    } catch (uploadErr) {
+      console.error('[Upload] Aadhaar back upload error:', uploadErr.message);
+    }
 
     const worker = await db.Worker.create({
-      firstName, lastName, email, phone, city,
-      skills: skillsArr, experience, passwordHash,
+      firstName,
+      lastName: lastName || null,
+      email: email || null,
+      phone,
+      city: city || null,
+      skills: skillsArr,
+      experience: experience || null,
+      passwordHash,
       aadhaarNumber: aadhaarNumber || null,
-      aadhaarFrontImageUrl, aadhaarBackImageUrl,
-      liveSelfieImageUrl, profilePhotoUrl,
-      verificationStatus, faceMatchConfidence,
-      isVerified,
+      aadhaarFrontImageUrl,
+      aadhaarBackImageUrl,
+      liveSelfieImageUrl: null,
+      profilePhotoUrl: null,
+      verificationStatus,
+      faceMatchConfidence: null,
+      isVerified: false,
     });
 
     const token = signToken(worker.id, 'worker');

@@ -9,18 +9,19 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --orange: #FF5C1A;
-    --orange-light: #FF8A5B;
-    --navy: #0D1B2A;
-    --navy-mid: #162336;
-    --navy-soft: #1E2F45;
-    --slate: #2E4560;
+    --orange: #E85D75;
+    --orange-light: #F47B8F;
+    --navy: #0A0E1A;
+    --navy-mid: #111827;
+    --navy-soft: #1A2235;
+    --slate: #2A3650;
     --cream: #FFF8F2;
-    --gold: #F4C842;
-    --teal: #00C9A7;
+    --gold: #FBBF24;
+    --teal: #00D4FF;
+    --violet: #8B5CF6;
     --text-primary: #FFFFFF;
     --text-dim: rgba(255,255,255,0.55);
-    --text-soft: rgba(255,255,255,0.8);
+    --text-soft: rgba(255,255,255,0.85);
   }
 
   html { scroll-behavior: smooth; }
@@ -68,10 +69,10 @@
     color: var(--orange);
   }
   .nav-btn-filled {
-    background: var(--orange);
+    background: linear-gradient(135deg, #E85D75, #8B5CF6);
     color: #fff; border: none;
   }
-  .nav-btn-filled:hover { background: var(--orange-light); transform: translateY(-1px); }
+  .nav-btn-filled:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
   /* HERO */
   .hero {
@@ -85,9 +86,12 @@
   }
   .hero-bg {
     position: absolute; inset: 0;
-    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255,92,26,0.12) 0%, transparent 70%),
-                radial-gradient(ellipse 50% 40% at 80% 80%, rgba(0,201,167,0.07) 0%, transparent 60%);
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(139,92,246,0.12) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 40% at 80% 80%, rgba(0,212,255,0.1) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 30% at 20% 60%, rgba(232,93,117,0.08) 0%, transparent 60%);
+    animation: meshFloat 20s ease-in-out infinite alternate;
   }
+  @keyframes meshFloat { 0%{opacity:0.7} 50%{opacity:1} 100%{opacity:0.7} }
   .hero-grid {
     position: absolute; inset: 0;
     background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
@@ -150,22 +154,22 @@
   .portal-card:hover { transform: translateY(-8px) scale(1.02); }
 
   .portal-customer {
-    background: linear-gradient(145deg, var(--navy-soft) 0%, #1a2e44 100%);
-    border: 1.5px solid rgba(255,92,26,0.3);
+    background: linear-gradient(145deg, var(--navy-soft) 0%, #1a1535 100%);
+    border: 1.5px solid rgba(232,93,117,0.3);
   }
   .portal-customer::before {
-    background: linear-gradient(145deg, rgba(255,92,26,0.08), transparent);
+    background: linear-gradient(145deg, rgba(232,93,117,0.08), transparent);
   }
-  .portal-customer:hover { border-color: var(--orange); box-shadow: 0 20px 60px rgba(255,92,26,0.2); }
+  .portal-customer:hover { border-color: var(--orange); box-shadow: 0 20px 60px rgba(232,93,117,0.2); }
 
   .portal-worker {
-    background: linear-gradient(145deg, var(--navy-soft) 0%, #132a3a 100%);
-    border: 1.5px solid rgba(0,201,167,0.3);
+    background: linear-gradient(145deg, var(--navy-soft) 0%, #0D1F2D 100%);
+    border: 1.5px solid rgba(0,212,255,0.3);
   }
   .portal-worker::before {
-    background: linear-gradient(145deg, rgba(0,201,167,0.08), transparent);
+    background: linear-gradient(145deg, rgba(0,212,255,0.08), transparent);
   }
-  .portal-worker:hover { border-color: var(--teal); box-shadow: 0 20px 60px rgba(0,201,167,0.18); }
+  .portal-worker:hover { border-color: var(--teal); box-shadow: 0 20px 60px rgba(0,212,255,0.18); }
 
   .portal-icon {
     width: 60px; height: 60px;

@@ -52,8 +52,8 @@ async function startServer() {
   // ── Security + Logging Middleware ─────────────────────────────
   securityMiddleware(app, config);
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-  app.use(express.json({ limit: '15mb' }));  // Increased for base64 image uploads
-  app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+  app.use(express.json({ limit: '50mb' }));  // Large limit for base64 Aadhaar + selfie uploads
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
   // ── Serve Frontend Static Files ───────────────────────────────
   app.use(express.static(path.join(__dirname, '../frontend/public')));

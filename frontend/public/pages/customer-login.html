@@ -7,29 +7,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/shared.css">
 <style>
-  :root { --glass-bg: rgba(26, 8, 0, 0.6); --glass-border: rgba(255, 255, 255, 0.1); }
+  :root { --glass-bg: rgba(10, 14, 26, 0.7); --glass-border: rgba(139,92,246,0.15); --teal: #00D4FF; --orange: #E85D75; }
   body {
     margin: 0; padding: 0; font-family: 'Inter', sans-serif;
     color: #fff; min-height: 100vh; overflow-x: hidden;
-    background: #000; display: flex; align-items: center; justify-content: center;
+    background: #0A0E1A; display: flex; align-items: center; justify-content: center;
   }
-  
-  /* Ken Burns Background Animation */
   .bg-animation {
     position: fixed; top: -5%; left: -5%; width: 110%; height: 110%;
-    background-image: url('https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2070&auto=format&fit=crop');
-    background-size: cover; background-position: center;
-    z-index: -2; animation: kenBurns 30s infinite alternate ease-in-out;
+    background: linear-gradient(135deg, #0A0E1A 0%, #1A1035 30%, #0A0E1A 60%, #0D1F2D 100%);
+    z-index: -2; animation: bgShift 25s infinite alternate ease-in-out;
   }
   .bg-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(135deg, rgba(26,8,0,0.85) 0%, rgba(255,92,26,0.2) 100%);
-    z-index: -1;
+    background: 
+      radial-gradient(ellipse at 30% 50%, rgba(232,93,117,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 20%, rgba(139,92,246,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(0,212,255,0.08) 0%, transparent 50%);
+    z-index: -1; animation: meshFloat 20s ease-in-out infinite alternate;
   }
-  @keyframes kenBurns {
-    0% { transform: scale(1) translate(0, 0); }
-    100% { transform: scale(1.1) translate(-20px, -15px); }
-  }
+  @keyframes bgShift { 0%{transform:scale(1) translate(0,0)} 100%{transform:scale(1.08) translate(-15px,-10px)} }
+  @keyframes meshFloat { 0%{opacity:0.8} 50%{opacity:1} 100%{opacity:0.8} }
 
   /* Glassmorphism Container */
   .glass-container {
@@ -56,7 +54,7 @@
   /* Tabs */
   .tabs { display: flex; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 5px; margin-bottom: 32px; }
   .tab { flex: 1; text-align: center; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.3s; color: rgba(255,255,255,0.5); }
-  .tab.active { background: var(--orange); color: #fff; box-shadow: 0 4px 15px rgba(255,92,26,0.3); }
+  .tab.active { background: linear-gradient(135deg, #E85D75, #8B5CF6); color: #fff; box-shadow: 0 4px 15px rgba(139,92,246,0.3); }
 
   /* Forms */
   .form-group { margin-bottom: 20px; text-align: left; }
@@ -70,7 +68,7 @@
   .form-input::placeholder { color: rgba(255,255,255,0.3); }
   
   .submit-btn {
-    width: 100%; background: linear-gradient(135deg, var(--orange) 0%, #FF3D00 100%);
+    width: 100%; background: linear-gradient(135deg, #E85D75 0%, #8B5CF6 100%);
     color: #fff; border: none; border-radius: 12px; padding: 16px;
     font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700;
     cursor: pointer; transition: all 0.3s; margin-top: 10px;
@@ -191,7 +189,7 @@
 /* Inline fallback for modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: center; justify-content: center; }
 .modal-overlay.open { display: flex; }
-.modal { background: #1a0800; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 36px; width: 100%; max-width: 420px; animation: modalIn 0.3s ease; }
+.modal { background: #111827; border: 1px solid rgba(139,92,246,0.2); border-radius: 20px; padding: 36px; width: 100%; max-width: 420px; animation: modalIn 0.3s ease; }
 @keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
 .modal-title { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; margin-bottom: 24px; color: #fff; }
 .otp-step { display: none; }
