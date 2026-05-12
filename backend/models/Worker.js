@@ -37,7 +37,6 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM('pending', 'verified', 'rejected'),
       defaultValue: 'pending'
     },
-    faceMatchConfidence:  { type: DataTypes.FLOAT, allowNull: true },
     verificationNotes:    { type: DataTypes.TEXT,  allowNull: true },
   }, { tableName: 'workers', underscored: true });
 

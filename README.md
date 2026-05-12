@@ -1,6 +1,6 @@
 # ServiConnect 🔧
 
-> **Smart Local On-Demand Services Platform**  
+> **Smart Local On-Demand Services Platform**
 > *Right Worker. Right Time. Right at Your Door.*
 
 [![Node.js](https://img.shields.io/badge/Node.js-v18%2B-green?logo=node.js)](https://nodejs.org)
@@ -10,17 +10,30 @@
 [![Socket.io](https://img.shields.io/badge/Socket.io-v4.8-white?logo=socket.io)](https://socket.io)
 [![License](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
 
+🌐 **Live:** [https://serviconnect.me](https://serviconnect.me) &nbsp;|&nbsp; [http://54.211.227.127](http://54.211.227.127)
+
 ---
 
-## 🌟 What is ServiConnect?
+## 🌟 Overview
 
-ServiConnect is a **production-grade, full-stack platform** that connects local customers with verified on-demand service workers (plumbers, electricians, carpenters, cleaners, etc.) in real time. It features:
+ServiConnect is a **production-grade, full-stack platform** connecting local customers with verified on-demand service workers — plumbers, electricians, carpenters, cleaners, AC technicians, and more — in real time. Built from scratch with a premium glassmorphism UI, AI-powered features, and enterprise AWS deployment.
 
-- 📱 **OTP-based authentication** via AWS SNS (real SMS delivery)
-- 🗺️ **Real-time worker tracking** with OpenStreetMap + Socket.io
-- 🤖 **AI-powered features** — smart worker matching, price estimation, sentiment analysis, and an intelligent chatbot — all via AWS Bedrock (Claude 3 Haiku)
-- 🔐 **Aadhaar identity verification** with secure document upload
-- ☁️ **Enterprise AWS deployment** using CloudFormation (VPC, ECS Fargate, RDS, ALB, S3, CloudFront, Secrets Manager)
+### ✨ Key Highlights
+
+| Feature | Description |
+|---------|-------------|
+| 🔐 Password Login | Secure bcrypt-hashed login for customers & workers |
+| 📱 OTP Verification | AWS SNS SMS for registration & password reset |
+| 📢 Worker SMS Alerts | Up to 5 matched workers notified per new job request |
+| 🗺️ Live Tracking | OpenStreetMap + Leaflet.js + Socket.io real-time GPS |
+| 🤖 AI Chatbot | AWS Bedrock Claude 3 Haiku — 24/7 customer support |
+| 🎯 Smart Matching | AI-powered worker recommendation engine |
+| 💰 Price Estimation | Dynamic AI pricing based on service & location |
+| 🆔 Aadhaar KYC | Worker identity verification with secure document upload |
+| 📸 Profile Photos | Upload & display profile images on dashboards |
+| 🎨 Premium UI | Dark glassmorphism with 3D isometric illustrations |
+| 🔒 SSL/HTTPS | Let's Encrypt auto-renewing certificate |
+| ☁️ AWS Infrastructure | CloudFormation, EC2, RDS, SNS, SQS, Bedrock |
 
 ---
 
@@ -28,539 +41,436 @@ ServiConnect is a **production-grade, full-stack platform** that connects local 
 
 ```
 servi-connect/
-├── backend/                          ← Node.js + Express API Server (v2.0)
-│   ├── server.js                     ← Entry point — Express + Socket.io + SQS worker
-│   ├── package.json
-│   ├── Dockerfile                    ← Docker container for ECS Fargate
-│   ├── docker-compose.yml            ← Local dev (API + PostgreSQL)
-│   ├── .env.example                  ← Copy to .env and fill values
+├── backend/                       # Node.js + Express API (v2.0)
+│   ├── server.js                  # Entry — Express + Socket.io + SQS worker
 │   ├── config/
-│   │   ├── aws.js                    ← Loads config from AWS Secrets Manager / .env
-│   │   └── database.js               ← Sequelize connection factory
+│   │   ├── aws.js                 # AWS Secrets Manager / .env config loader
+│   │   └── database.js            # Sequelize connection factory
+│   ├── controllers/
+│   │   └── locationController.js  # GPS location update logic
 │   ├── middleware/
-│   │   ├── auth.js                   ← JWT protect + role-based authorize helpers
-│   │   ├── security.js               ← Helmet, CORS, rate limiting
-│   │   └── errorHandler.js           ← Global error handler
+│   │   ├── auth.js                # JWT protect + role authorization
+│   │   ├── security.js            # Helmet, CORS configuration
+│   │   ├── rateLimiter.js         # express-rate-limit (100 req/15min)
+│   │   └── errorHandler.js        # Global error handler
 │   ├── models/
-│   │   ├── Customer.js               ← Sequelize model: customers table
-│   │   ├── Worker.js                 ← Sequelize model: workers table (Aadhaar, skills)
-│   │   ├── Booking.js                ← Sequelize model: bookings + status workflow
-│   │   ├── Review.js                 ← Sequelize model: ratings & reviews
-│   │   ├── PasswordResetToken.js     ← OTP password reset tokens
-│   │   └── index.js                  ← Model associations + sequelize init
+│   │   ├── Customer.js            # Customer schema (phone, name, profilePhotoUrl)
+│   │   ├── Worker.js              # Worker schema (skills, Aadhaar, rating, GPS)
+│   │   ├── Booking.js             # Booking lifecycle (pending→accepted→completed)
+│   │   ├── Review.js              # Star ratings + text reviews
+│   │   ├── PasswordResetToken.js  # OTP tokens (registration & reset)
+│   │   ├── userLocation.js        # GPS coordinate history
+│   │   ├── store.js               # In-memory OTP store
+│   │   └── index.js               # Sequelize init + model associations
 │   ├── routes/
-│   │   ├── auth.js                   ← POST /api/auth/* — register, login, OTP, reset
-│   │   ├── customer.js               ← GET/POST /api/customer/*
-│   │   ├── worker.js                 ← GET/PATCH /api/worker/*
-│   │   ├── ai.js                     ← POST /api/ai/* — chatbot, matching, pricing
-│   │   └── admin.js                  ← GET/PATCH /api/admin/* — admin panel APIs
+│   │   ├── auth.js                # Register, login, OTP, forgot password
+│   │   ├── customer.js            # Bookings, tracking, ratings, profile
+│   │   ├── worker.js              # Jobs, availability, location, profile
+│   │   ├── ai.js                  # Chatbot, matching, price estimation
+│   │   ├── admin.js               # Dashboard stats, worker verification
+│   │   └── locationRoutes.js      # GPS update endpoint
 │   ├── services/
-│   │   ├── smsService.js             ← AWS SNS — sends OTP SMS to real phones
-│   │   ├── uploadService.js          ← AWS S3 — Aadhaar + selfie document uploads
-│   │   ├── socketService.js          ← Socket.io — real-time location updates
-│   │   ├── sqsService.js             ← AWS SQS — async job queue
-│   │   ├── chatbotService.js         ← AWS Bedrock Claude — AI chat support
-│   │   ├── workerMatchingAI.js       ← AWS Bedrock — intelligent worker recommendation
-│   │   ├── priceEstimationAI.js      ← AWS Bedrock — dynamic price estimation
-│   │   ├── reviewSentimentService.js ← AWS Comprehend — review sentiment analysis
-│   │   └── bedrockService.js         ← AWS Bedrock base client
+│   │   ├── smsService.js          # AWS SNS — OTP + job notification SMS
+│   │   ├── socketService.js       # Socket.io — real-time events
+│   │   ├── sqsService.js          # AWS SQS — async message queue
+│   │   ├── chatbotService.js      # AWS Bedrock Claude — AI chatbot
+│   │   ├── workerMatchingAI.js    # Intelligent worker recommendation
+│   │   ├── priceEstimationAI.js   # Dynamic price estimation
+│   │   ├── bedrockService.js      # AWS Bedrock base client
+│   │   ├── reviewSentimentService.js # AI review sentiment analysis
+│   │   ├── faceMatchService.js    # Face verification service
+│   │   └── uploadService.js       # Base64 image → disk storage
 │   ├── workers/
-│   │   └── dbWorker.js               ← SQS consumer — async background DB operations
-│   ├── migrations/                   ← Sequelize migration files
-│   └── tests/                        ← Jest unit + integration tests
+│   │   └── dbWorker.js            # SQS consumer + worker SMS notifications
+│   ├── migrations/                # Sequelize DB migrations
+│   ├── tests/
+│   │   ├── api.test.js            # API integration tests
+│   │   └── auth.test.js           # Authentication unit tests
+│   ├── uploads/                   # Profile photos, Aadhaar docs, etc.
+│   ├── Dockerfile                 # Multi-stage Docker build (node:20-alpine)
+│   ├── docker-compose.yml         # Backend + PostgreSQL local dev
+│   ├── package.json               # Dependencies & scripts
+│   ├── seed.js                    # Database seeder
+│   └── .env.example               # Environment variables template
 │
 ├── frontend/
-│   └── public/                       ← Served as static files by Express
-│       ├── index.html                ← Landing page (glassmorphism violet theme)
+│   └── public/                    # Served as static files
+│       ├── index.html             # Landing page (3D isometric hero)
+│       ├── images/                # Generated 3D illustrations
 │       ├── css/
-│       │   └── shared.css            ← Premium dark glassmorphism UI styles
+│       │   └── shared.css         # Premium dark glassmorphism styles
 │       ├── js/
-│       │   └── api.js                ← Auth helpers + Axios API client
+│       │   ├── api.js             # Auth helpers + REST API client
+│       │   ├── config.js          # Runtime config loader
+│       │   └── ai-chat-v2.js      # ServiBot AI chatbot widget
 │       └── pages/
-│           ├── customer-login.html   ← Customer login + OTP signup
-│           ├── customer-dashboard.html ← Customer dashboard: book, track, rate
-│           ├── worker-login.html     ← Worker login + Aadhaar registration
-│           ├── worker-dashboard.html ← Worker dashboard: jobs, map, earnings
-│           ├── admin-login.html      ← Admin login
-│           └── admin-dashboard.html  ← Admin panel: manage workers & bookings
+│           ├── customer-login.html     # Customer login + signup
+│           ├── customer-dashboard.html # Book, track, rate services
+│           ├── worker-login.html       # Worker login + Aadhaar registration
+│           ├── worker-dashboard.html   # Jobs, map, earnings
+│           ├── tracking.html           # Real-time worker tracking map
+│           ├── admin-login.html        # Admin login
+│           └── admin-dashboard.html    # Admin panel
 │
-├── cloudformation/                   ← AWS Infrastructure as Code
-│   ├── single-click-deploy.yaml      ← ⭐ One-click full-stack AWS deployment
-│   ├── ec2-single-click.yaml         ← Simplified EC2 deploy (for beginners)
-│   ├── master.yaml                   ← Nested stack orchestrator
-│   ├── templates/
-│   │   ├── vpc.yaml                  ← VPC, subnets, security groups
-│   │   ├── rds.yaml                  ← PostgreSQL RDS (Multi-AZ)
-│   │   ├── ecs.yaml                  ← ECS Fargate cluster + service
-│   │   ├── s3-cloudfront.yaml        ← S3 bucket + CloudFront CDN
-│   │   └── iam.yaml                  ← IAM roles and policies
-│   └── parameters/
-│       ├── prod.json                 ← Production stack parameters
-│       └── dev.json                  ← Development stack parameters
+├── cloudformation/                # AWS Infrastructure as Code
+│   ├── single-click-deploy.yaml   # Full-stack AWS (VPC, ECS, RDS, ALB, S3)
+│   ├── ec2-single-click.yaml      # Simplified EC2 deployment
+│   ├── master.yaml                # Nested stack orchestrator
+│   └── templates/                 # Component CloudFormation templates
 │
-├── docs/                             ← Deployment guides
-│   ├── BEGINNER_DEPLOYMENT_GUIDE.md  ← Step-by-step for AWS beginners
-│   ├── DEPLOYMENT_GUIDE_GUI.md       ← AWS Console GUI deployment
-│   ├── DEPLOYMENT_GUIDE_CLOUDFORMATION.md
+├── terraform/                     # Alternative IaC (Terraform)
+│   ├── main.tf, variables.tf, outputs.tf, provider.tf
+│   ├── modules/                   # Reusable Terraform modules
+│   └── environments/              # Dev/prod tfvars
+│
+├── .github/workflows/             # CI/CD Pipelines
+│   ├── backend-ci.yml             # Backend lint + test + build
+│   ├── frontend-ci.yml            # Frontend validation
+│   ├── db-check.yml               # Database migration checks
+│   ├── security-scan.yml          # Dependency vulnerability scan
+│   └── terraform-plan.yml         # Terraform plan on PR
+│
+├── docs/                          # Documentation
+│   ├── BEGINNER_DEPLOYMENT_GUIDE.md
 │   ├── EC2_DEPLOYMENT_GUIDE.md
+│   ├── DEPLOYMENT_GUIDE_CLOUDFORMATION.md
+│   ├── DEPLOYMENT_GUIDE_TERRAFORM.md
 │   ├── GITHUB_WORKFLOW.md
 │   ├── TEAM_ROLES.md
-│   └── ai-features.md               ← AI feature documentation
+│   ├── ai-features.md
+│   └── iam-roles.md
 │
-├── migrations/                       ← Root-level DB migration scripts
-├── seeders/                          ← Database seed data
-├── scripts/                          ← Utility / CI scripts
-├── nginx.conf                        ← Nginx reverse proxy config (EC2)
-├── Makefile                          ← Common dev commands
+├── scripts/
+│   ├── db-migrate.sh              # Database migration script
+│   └── deploy-frontend.sh         # Frontend S3 deployment
+│
+├── nginx.conf                     # Nginx reverse proxy + SSL config
+├── Makefile                       # Developer automation commands
 └── .gitignore
 ```
 
 ---
 
-## 🚀 Quick Start (Local Development)
+## 🚀 Quick Start
 
 ### Prerequisites
 
-| Tool | Version | Install |
+| Tool | Version | Purpose |
 |------|---------|---------|
-| Node.js | v18+ | [nodejs.org](https://nodejs.org) |
-| PostgreSQL | v14+ | [postgresql.org](https://www.postgresql.org/download/) |
-| Git | any | [git-scm.com](https://git-scm.com) |
+| Node.js | v18+ | Runtime |
+| PostgreSQL | v14+ | Database |
+| Git | any | Version control |
 
-### Step 1 — Clone the Repository
+### Local Development
 
 ```bash
+# Clone the repository
 git clone https://github.com/Gowtham833/local-service-connect.git
 cd local-service-connect
-```
 
-### Step 2 — Configure Environment Variables
-
-```bash
+# Configure environment
 cd backend
 cp .env.example .env
-```
+# Edit .env with your DB credentials, JWT secret, AWS keys
 
-Open `.env` and fill in your values:
-
-```env
-# App
-PORT=5000
-NODE_ENV=development
-
-# PostgreSQL (local)
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=serviconnect
-DB_USER=postgres
-DB_PASS=your_postgres_password
-
-# JWT
-JWT_SECRET=your_random_secret_min_32_chars
-JWT_EXPIRE=7d
-
-# AWS (for OTP SMS and AI features — optional for basic local dev)
-AWS_REGION=us-east-1
-# AWS_ACCESS_KEY_ID=your_key        ← Only for local dev; use IAM roles in production
-# AWS_SECRET_ACCESS_KEY=your_secret
-
-# AWS SNS (OTP SMS delivery)
-# Configure in AWS Console → SNS
-
-# AWS Bedrock AI
-BEDROCK_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
-
-# Frontend URL
-FRONTEND_URL=http://localhost:5000
-```
-
-### Step 3 — Set Up the Database
-
-```bash
-# Create the database in PostgreSQL
+# Setup database
 psql -U postgres -c "CREATE DATABASE serviconnect;"
-
-# Run migrations
+npm install
 npm run migrate
 
-# (Optional) Seed sample data
-npm run seed
-```
-
-### Step 4 — Install Dependencies & Start Server
-
-```bash
-# Install dependencies
-npm install
-
-# Development mode (auto-restart on file changes)
+# Start development server
 npm run dev
-
-# OR production mode (runs migrations first)
-npm start
 ```
 
-You should see:
-```
-╔══════════════════════════════════════════╗
-║      ServiConnect API Server v2.0        ║
-║      Running on http://localhost:5000    ║
-║      Environment: development            ║
-╚══════════════════════════════════════════╝
-[DB] PostgreSQL connection established
-[DB] Models synced (development mode)
-[SQS] DB worker started
-```
-
-### Step 5 — Open the App
-
-```
-http://localhost:5000
-```
-
-The Express server serves both the REST API and all frontend pages.
-
----
-
-## 🐳 Docker Compose (Recommended for Local Dev)
-
-Run the full stack (API + PostgreSQL) with a single command:
+### Docker Development
 
 ```bash
 cd backend
 docker-compose up --build
+# App: http://localhost:5000 | DB: localhost:5432
 ```
 
-This starts:
-- `serviconnect-api` on port `5000`
-- `serviconnect-db` PostgreSQL on port `5432`
+### Makefile Shortcuts
+
+```bash
+make dev-backend    # Start backend locally
+make dev-docker     # Start with Docker Compose
+make migrate        # Run DB migrations
+make seed           # Seed sample data
+make test           # Run tests with coverage
+make build-docker   # Build Docker image
+make deploy-frontend # Upload frontend to S3
+```
+
+Open **http://localhost:5000** — Express serves both API and frontend.
 
 ---
 
-## 🔗 URL Reference
+## 🔗 Application Pages
 
 | URL | Page | Auth Required |
-|-----|------|:---:|
-| `http://localhost:5000/` | 🏠 Landing page | No |
-| `http://localhost:5000/pages/customer-login.html` | 👤 Customer login / OTP signup | No |
-| `http://localhost:5000/pages/customer-dashboard.html` | 📋 Customer dashboard | ✅ Customer |
-| `http://localhost:5000/pages/worker-login.html` | 🔧 Worker login / Aadhaar registration | No |
-| `http://localhost:5000/pages/worker-dashboard.html` | 🗺️ Worker dashboard | ✅ Worker |
-| `http://localhost:5000/pages/admin-login.html` | 🛡️ Admin login | No |
-| `http://localhost:5000/pages/admin-dashboard.html` | ⚙️ Admin panel | ✅ Admin |
-| `http://localhost:5000/api/health` | 💚 API health check | No |
+|-----|------|:------------:|
+| `/` | 🏠 Landing page | — |
+| `/pages/customer-login.html` | 👤 Customer login / signup | — |
+| `/pages/customer-dashboard.html` | 📋 Customer dashboard | ✅ Customer |
+| `/pages/worker-login.html` | 🔧 Worker login / registration | — |
+| `/pages/worker-dashboard.html` | 🗺️ Worker dashboard | ✅ Worker |
+| `/pages/tracking.html` | 📍 Real-time worker tracking | ✅ Customer |
+| `/pages/admin-login.html` | 🛡️ Admin login | — |
+| `/pages/admin-dashboard.html` | ⚙️ Admin panel | ✅ Admin |
 
 ---
 
-## 🔌 API Reference
+## 🔌 REST API Reference
 
-### Authentication (`/api/auth`) — Public
+### Authentication — `/api/auth`
 
-```
-POST /api/auth/customer/register     — Register new customer account
-POST /api/auth/customer/login        — Customer login → returns JWT token
-POST /api/auth/customer/send-otp     — Send OTP via AWS SNS SMS
-POST /api/auth/customer/verify-otp   — Verify OTP → returns JWT token
-POST /api/auth/customer/forgot-password — Send password reset OTP
-POST /api/auth/customer/reset-password  — Reset password with OTP
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/register/send-otp` | Send OTP for registration |
+| `POST` | `/customer/register` | Register customer (with OTP) |
+| `POST` | `/customer/login` | Login with phone + password |
+| `POST` | `/worker/register` | Register worker (Aadhaar + OTP) |
+| `POST` | `/worker/login` | Login with phone + password |
+| `POST` | `/admin/login` | Admin login (username/password) |
+| `POST` | `/login/send-otp` | Send OTP for login (legacy) |
+| `POST` | `/forgot-password` | Send password reset OTP |
+| `POST` | `/verify-otp` | Verify OTP code |
+| `POST` | `/reset-password` | Set new password with reset token |
+| `POST` | `/customer/reset-password` | Customer-specific password reset |
+| `POST` | `/worker/reset-password` | Worker-specific password reset |
 
-POST /api/auth/worker/register       — Register worker (with Aadhaar upload)
-POST /api/auth/worker/login          — Worker login → returns JWT token
-POST /api/auth/worker/send-otp       — Send OTP via AWS SNS SMS
-POST /api/auth/worker/verify-otp     — Verify OTP → returns JWT token
-POST /api/auth/worker/forgot-password
-POST /api/auth/worker/reset-password
-```
+### Customer — `/api/customer` *(Bearer Token)*
 
-### Customer Routes (`/api/customer`) — Bearer Token: `customer`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/me` | Profile + stats + recent bookings |
+| `GET` | `/workers` | Browse available workers |
+| `POST` | `/bookings` | Post new service request |
+| `GET` | `/bookings` | List all bookings |
+| `PATCH` | `/bookings/:id/rate` | Rate a completed booking |
+| `GET` | `/bookings/:id/tracking` | Live worker tracking data |
+| `PATCH` | `/location` | Update customer GPS |
+| `PATCH` | `/profile` | Update profile + photo upload |
 
-```
-GET  /api/customer/me                — Profile + stats + recent bookings
-GET  /api/customer/workers           — Browse available workers (?service=Plumbing&city=Hyderabad)
-GET  /api/customer/bookings          — All bookings
-POST /api/customer/bookings          — Post new service request
-PATCH /api/customer/bookings/:id/rate — Rate a completed booking (1–5 stars + review)
-POST /api/customer/contact-worker/:id — Get worker contact info (after booking)
-```
+### Worker — `/api/worker` *(Bearer Token)*
 
-### Worker Routes (`/api/worker`) — Bearer Token: `worker`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/me` | Profile + stats + job history |
+| `PATCH` | `/availability` | Toggle online/offline |
+| `PATCH` | `/location` | Update GPS coordinates |
+| `GET` | `/open-jobs` | Available jobs matching skills |
+| `PATCH` | `/jobs/:id/accept` | Accept an open job |
+| `PATCH` | `/jobs/:id/start` | Start working on accepted job |
+| `PATCH` | `/jobs/:id/complete` | Complete job + set price |
+| `GET` | `/verification-status` | Check Aadhaar verification |
+| `PATCH` | `/profile` | Update profile + photo upload |
 
-```
-GET   /api/worker/me                 — Profile + stats + job history
-PATCH /api/worker/availability       — Toggle online/offline { isAvailable: true/false }
-PATCH /api/worker/location           — Update GPS location { lat, lng }
-GET   /api/worker/open-jobs          — Available jobs matching worker's skills
-PATCH /api/worker/jobs/:id/accept    — Accept an open job
-PATCH /api/worker/jobs/:id/complete  — Mark job complete + set price { price: 850 }
-```
+### AI — `/api/ai` *(Bearer Token)*
 
-### AI Routes (`/api/ai`) — Bearer Token: any
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/chat` | AI chatbot (Bedrock Claude 3 Haiku) |
+| `POST` | `/match-workers` | AI worker recommendation |
+| `GET` | `/price-estimate` | AI dynamic price estimation |
 
-```
-POST /api/ai/chat                    — AI chatbot (AWS Bedrock Claude 3 Haiku)
-POST /api/ai/match-workers           — AI worker recommendation for a service
-POST /api/ai/estimate-price          — AI price estimation for a job
-POST /api/ai/analyze-review          — AWS Comprehend sentiment analysis
-```
+### Admin — `/api/admin` *(Bearer Token)*
 
-### Admin Routes (`/api/admin`) — Bearer Token: `admin`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/stats` | Platform-wide statistics |
+| `GET` | `/workers` | List all registered workers |
+| `GET` | `/workers/:id` | Worker detail view |
+| `PATCH` | `/workers/:id/verify` | Approve/reject worker KYC |
+| `GET` | `/bookings` | All bookings with filters |
+| `GET` | `/bookings/:id` | Booking detail view |
 
-```
-GET   /api/admin/dashboard           — Platform-wide stats
-GET   /api/admin/workers             — All workers (with verification status)
-PATCH /api/admin/workers/:id/verify  — Approve / reject worker Aadhaar verification
-GET   /api/admin/bookings            — All bookings with filters
-GET   /api/admin/customers           — All registered customers
-```
+### System
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/health` | Health check (DB connectivity) |
 
 ---
 
 ## 🧠 AI Features (AWS Bedrock)
 
-ServiConnect integrates **AWS Bedrock (Claude 3 Haiku)** and **AWS Comprehend** for intelligent automation:
+| Feature | Model | Description |
+|---------|-------|-------------|
+| 🤖 ServiBot Chatbot | Claude 3 Haiku | 24/7 conversational support with Telugu language support |
+| 🎯 Smart Worker Matching | Scoring Algorithm | Ranks workers by rating, distance, skills, response time |
+| 💰 Price Estimation | Claude 3 Haiku | Dynamic pricing based on service type, duration, location |
+| 📝 Review Sentiment | Comprehend | Detects fake/spam reviews using sentiment analysis |
 
-| Feature | Service | Description |
-|---------|---------|-------------|
-| 🤖 AI Chatbot | Bedrock Claude 3 Haiku | 24/7 customer support, booking help, FAQ |
-| 🎯 Smart Worker Matching | Bedrock Claude 3 Haiku | Recommends best workers by rating, proximity, and skills |
-| 💰 Price Estimation | Bedrock Claude 3 Haiku | Dynamic job pricing based on service type, duration, and location |
-| 😊 Sentiment Analysis | AWS Comprehend | Analyses customer reviews to flag negative experiences |
+---
 
-> Configure AI via `BEDROCK_REGION` and `BEDROCK_MODEL_ID` in `.env`. AWS Bedrock models are enabled by default upon first invocation in your region.
+## 📱 SMS Notifications (AWS SNS)
+
+| Trigger | Recipients | Message |
+|---------|-----------|---------|
+| Customer/Worker Registration | Registering user | 6-digit OTP code |
+| Forgot Password | Requesting user | 6-digit reset OTP |
+| New Service Request Posted | Up to 5 matched workers | Job alert with service type & area |
+
+> ⚠️ **AWS SNS Sandbox:** New AWS accounts start in sandbox mode. Add phone numbers manually for testing, or [request production access](https://docs.aws.amazon.com/sns/latest/dg/sns-sms-sandbox.html) for universal delivery.
 
 ---
 
 ## 🗺️ Real-Time Features (Socket.io)
 
-ServiConnect uses **Socket.io v4** for live bidirectional communication:
-
-- 📍 **Live Worker Location** — Worker GPS coordinates streamed to customer's map (OpenStreetMap + Leaflet.js)
-- 🔔 **Job Notifications** — Workers receive instant job alerts when customers post requests
-- 📊 **Status Updates** — Booking status changes (accepted → en route → completed) pushed live
-- 💬 **In-App Messaging** — Real-time communication between customers and workers
+- **📍 Live Worker Location** — GPS coordinates streamed to customer's Leaflet.js map
+- **🔔 Instant Job Alerts** — Workers receive real-time push for new requests
+- **📊 Status Updates** — Booking lifecycle events broadcast live (pending → accepted → en-route → completed)
 
 ---
 
-## 🔐 Security Features
+## 🎨 UI/UX Design
 
-| Feature | Implementation |
-|---------|---------------|
-| Authentication | JWT (jsonwebtoken v9) |
-| Password Hashing | bcryptjs (salt rounds: 12) |
-| OTP Delivery | AWS SNS (real SMS, 6-digit, 5-min expiry) |
+The frontend uses a **premium dark-mode glassmorphism** aesthetic:
+
+- **Landing Page** — Split hero with 3D isometric illustration, floating emoji icons, animated gradient orbs, glassmorphism service cards
+- **Login Pages** — Glass containers with floating decorative service icons
+- **Dashboards** — Card-based layouts with real-time stat widgets, interactive maps
+- **ServiBot Widget** — Violet-themed floating AI chatbot
+- **Typography** — Google Fonts (Syne + DM Sans)
+- **Animations** — CSS keyframe floating, pulsing markers, smooth hover transitions
+- **Responsive** — Mobile-first grid layouts
+
+---
+
+## 🔐 Security
+
+| Layer | Implementation |
+|-------|---------------|
+| Authentication | JWT (jsonwebtoken v9, 7-day expiry) |
+| Password Hashing | bcryptjs (12 salt rounds) |
+| OTP Delivery | AWS SNS (6-digit, 5-min expiry) |
 | Rate Limiting | express-rate-limit (100 req/15min) |
-| HTTP Security | Helmet.js (CSP, HSTS, XSS protection) |
-| Identity Verification | Aadhaar card upload → AWS S3 → Admin review |
-| Secrets Management | AWS Secrets Manager + Parameter Store (production) |
-| Input Validation | express-validator on all routes |
+| HTTP Headers | Helmet.js (CSP, HSTS, XSS protection) |
+| Identity Verification | Aadhaar upload → Admin approval flow |
+| Input Validation | express-validator on all POST/PATCH routes |
+| File Upload | Multer (50MB limit) + base64 encoding |
+| HTTPS/SSL | Let's Encrypt (auto-renewing via Certbot) |
+| Secrets | AWS Secrets Manager (production) / .env (dev) |
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Runtime** | Node.js v18+ | JavaScript server runtime |
-| **Framework** | Express v4.18 | REST API server |
-| **Database** | PostgreSQL v15 + Sequelize v6 | Relational data + ORM |
-| **Real-time** | Socket.io v4.8 | Live tracking & notifications |
-| **Auth** | JWT + bcryptjs | Stateless authentication |
-| **OTP/SMS** | AWS SNS | Real phone number OTP delivery |
-| **File Storage** | AWS S3 + Multer | Aadhaar & document uploads |
-| **AI/ML** | AWS Bedrock (Claude 3 Haiku) | Chatbot, matching, pricing |
-| **Sentiment** | AWS Comprehend | Review analysis |
-| **Queue** | AWS SQS | Async background job processing |
-| **Email** | AWS SES | Transactional emails |
-| **Maps** | OpenStreetMap + Leaflet.js | Free real-time mapping |
-| **Frontend** | Vanilla HTML + CSS + JS | Glassmorphism violet-theme UI |
-| **Fonts** | Google Fonts (Syne + DM Sans) | Premium typography |
-| **Security** | Helmet + express-rate-limit | HTTP hardening |
-| **Container** | Docker + Docker Compose | Local dev & production container |
-| **IaC** | AWS CloudFormation | Infrastructure as Code |
-| **Proxy** | Nginx | Reverse proxy (EC2 deployments) |
-| **Testing** | Jest + Supertest | Unit & integration tests |
+| Layer | Technology |
+|-------|-----------|
+| **Runtime** | Node.js v18+ |
+| **Framework** | Express v4.18 |
+| **Database** | PostgreSQL v15 + Sequelize v6 ORM |
+| **Real-time** | Socket.io v4.8 |
+| **Auth** | JWT + bcryptjs |
+| **SMS/OTP** | AWS SNS |
+| **AI/ML** | AWS Bedrock (Claude 3 Haiku) + AWS Comprehend |
+| **Queue** | AWS SQS |
+| **Maps** | OpenStreetMap + Leaflet.js |
+| **File Upload** | Multer + Local disk (S3-ready) |
+| **Frontend** | Vanilla HTML/CSS/JS (Glassmorphism) |
+| **IaC** | AWS CloudFormation + Terraform |
+| **CI/CD** | GitHub Actions (5 workflows) |
+| **Container** | Docker + Docker Compose |
+| **Proxy** | Nginx (reverse proxy + SSL termination) |
+| **Process Mgr** | PM2 |
+| **Testing** | Jest + Supertest |
 
 ---
 
-## ☁️ AWS Deployment
+## ☁️ Production Deployment
 
-ServiConnect ships with **production-ready AWS CloudFormation templates** for enterprise-scale deployment.
+### Current Live Server
 
-### Architecture
+| Component | Details |
+|-----------|---------|
+| **URL** | https://serviconnect.me |
+| **IP** | 54.211.227.127 |
+| **Server** | AWS EC2 (Amazon Linux 2023) |
+| **Database** | AWS RDS PostgreSQL (SSL) |
+| **SSL** | Let's Encrypt (auto-renew) |
+| **Process** | PM2 (auto-restart) |
+| **Proxy** | Nginx (port 80/443 → 5000) |
+| **DNS** | AWS Route 53 + Namecheap |
 
-```
-Internet
-    │
-    ▼
-CloudFront CDN (frontend static files from S3)
-    │
-    ▼
-Application Load Balancer (HTTPS)
-    │
-    ▼
-ECS Fargate Cluster (Docker containers — auto-scaling)
-    │
-    ├── AWS Secrets Manager  (DB credentials, JWT secret)
-    ├── AWS Parameter Store  (app config, URLs)
-    ├── AWS SNS              (OTP SMS delivery)
-    ├── AWS SQS              (async job queue)
-    ├── AWS S3               (Aadhaar + document storage)
-    ├── AWS Bedrock          (Claude 3 Haiku AI features)
-    └── AWS Comprehend       (review sentiment analysis)
-    │
-    ▼
-RDS PostgreSQL (Multi-AZ, encrypted)
-    (inside private subnets of VPC)
-```
+### CloudFormation (Enterprise)
 
-### Option A — Single-Click CloudFormation (Recommended)
+Upload `cloudformation/single-click-deploy.yaml` to the AWS Console for automated deployment:
+- VPC with public/private subnets
+- ECS Fargate cluster
+- RDS PostgreSQL
+- Application Load Balancer
+- S3 + CloudFront (frontend CDN)
+- Auto-scaling policies
 
-> 📖 See **[BEGINNER_DEPLOYMENT_GUIDE.md](./docs/BEGINNER_DEPLOYMENT_GUIDE.md)** for a complete step-by-step walkthrough.
+See [BEGINNER_DEPLOYMENT_GUIDE.md](./docs/BEGINNER_DEPLOYMENT_GUIDE.md) for step-by-step instructions.
 
-1. Go to [AWS CloudFormation Console](https://console.aws.amazon.com/cloudformation)
-2. Click **Create Stack → With new resources**
-3. Upload `cloudformation/single-click-deploy.yaml`
-4. Fill in parameters (DB password, domain, AWS region)
-5. Click **Create Stack** — AWS provisions everything automatically (~15 min)
-
-**What gets deployed:**
-- VPC with public + private subnets across 2 AZs
-- ECS Fargate cluster running the Node.js Docker container
-- RDS PostgreSQL (Multi-AZ, encrypted at rest)
-- Application Load Balancer with HTTPS (ACM certificate)
-- S3 bucket + CloudFront CDN for frontend
-- Secrets Manager storing DB credentials and JWT secret
-- SQS queue for async processing
-- IAM roles with least-privilege permissions
-
-### Option B — EC2 Single-Click (Simpler)
+### Terraform (Alternative)
 
 ```bash
-# Upload ec2-single-click.yaml in CloudFormation Console
-# This deploys a single EC2 instance with Docker + Nginx
-```
-
-> 📖 See [EC2_DEPLOYMENT_GUIDE.md](./docs/EC2_DEPLOYMENT_GUIDE.md)
-
-### Option C — Docker on Any VPS
-
-```bash
-git clone https://github.com/Gowtham833/local-service-connect.git
-cd local-service-connect/backend
-
-# Build and run container
-docker build -t serviconnect .
-docker run -d \
-  --name serviconnect \
-  -p 5000:5000 \
-  --env-file .env \
-  serviconnect
-
-# Or with docker-compose (includes PostgreSQL)
-docker-compose up -d
+cd terraform
+terraform init
+terraform plan -var-file=environments/dev/terraform.tfvars
+terraform apply -var-file=environments/dev/terraform.tfvars
 ```
 
 ---
 
-## 🧪 Running Tests
+## 📝 Environment Variables
+
+```bash
+# App
+PORT=5000
+NODE_ENV=development
+APP_NAME=serviconnect
+
+# PostgreSQL
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=serviconnect
+DB_USER=postgres
+DB_PASS=your_password
+
+# Security
+JWT_SECRET=replace_with_long_random_string_min_32_chars
+JWT_EXPIRE=7d
+
+# AWS
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=       # Use IAM role in production
+AWS_SECRET_ACCESS_KEY=   # Use IAM role in production
+SMS_ENABLED=true
+
+# AI
+BEDROCK_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
+
+# Frontend
+FRONTEND_URL=http://localhost:5000
+```
+
+---
+
+## 🧪 Testing
 
 ```bash
 cd backend
-
-# Run all tests with coverage report
-npm test
-
-# Watch mode during development
-npx jest --watch
+npm test                 # Run all tests with coverage
+npx jest --watch         # Watch mode
+npx jest tests/auth.test.js  # Single file
 ```
 
-Tests are located in `backend/tests/` and use **Jest + Supertest** for HTTP integration testing.
+### CI/CD Pipelines (GitHub Actions)
 
----
-
-## 📝 Database Migrations
-
-```bash
-cd backend
-
-# Run all pending migrations
-npm run migrate
-
-# Seed the database with sample data
-npm run seed
-
-# Roll back all migrations (⚠️ destructive)
-npm run migrate:undo
-```
-
----
-
-## 🔧 Makefile Commands
-
-```bash
-make install     # Install backend dependencies
-make dev         # Start development server
-make migrate     # Run database migrations
-make seed        # Seed sample data
-make test        # Run test suite
-make docker-up   # Start with Docker Compose
-make docker-down # Stop Docker containers
-```
-
----
-
-## 📱 Features Overview
-
-### Customer Features
-- ✅ OTP-based phone number registration (real SMS via AWS SNS)
-- ✅ Browse verified workers by service type and city
-- ✅ Book a service with preferred date/time
-- ✅ Real-time worker location tracking on OpenStreetMap
-- ✅ View worker contact details after booking confirmation
-- ✅ Rate and review completed jobs
-- ✅ Self-service password reset via OTP
-- ✅ AI chatbot for booking help and support
-- ✅ AI-powered price estimation before booking
-
-### Worker Features
-- ✅ OTP-based phone registration with Aadhaar identity verification
-- ✅ Upload Aadhaar card (securely stored in AWS S3, reviewed by admin)
-- ✅ Toggle online/offline availability
-- ✅ Real-time job notifications via Socket.io
-- ✅ Accept/decline open job requests
-- ✅ Update GPS location (shared live with customers)
-- ✅ Mark jobs as complete and set final price
-- ✅ View earnings and job history
-
-### Admin Features
-- ✅ Platform dashboard with real-time stats
-- ✅ Verify / reject worker Aadhaar documents
-- ✅ View and manage all bookings
-- ✅ Monitor all customers and workers
-
----
-
-## 🗂️ Environment Variables Reference
-
-| Variable | Required | Description |
-|----------|:--------:|-------------|
-| `PORT` | ✅ | Server port (default: 5000) |
-| `NODE_ENV` | ✅ | `development` or `production` |
-| `DB_HOST` | ✅ | PostgreSQL host |
-| `DB_PORT` | ✅ | PostgreSQL port (default: 5432) |
-| `DB_NAME` | ✅ | Database name |
-| `DB_USER` | ✅ | Database user |
-| `DB_PASS` | ✅ | Database password |
-| `JWT_SECRET` | ✅ | JWT signing secret (min 32 chars) |
-| `JWT_EXPIRE` | ✅ | Token expiry (e.g. `7d`) |
-| `AWS_REGION` | ✅ | AWS region (e.g. `us-east-1`) |
-| `BEDROCK_MODEL_ID` | ⚙️ | Claude model ID for AI features |
-| `SES_FROM_EMAIL` | ⚙️ | Verified SES sender email |
-| `FRONTEND_URL` | ⚙️ | Frontend base URL (for CORS) |
-| `COGNITO_USER_POOL_ID` | ⚙️ | AWS Cognito pool (optional) |
-
-> In **production** on AWS, secrets are loaded automatically from **AWS Secrets Manager** and **Parameter Store** — you do not set them as environment variables.
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| `backend-ci.yml` | Push/PR | Lint, test, build Docker image |
+| `frontend-ci.yml` | Push/PR | HTML/CSS validation |
+| `db-check.yml` | Push/PR | Migration integrity check |
+| `security-scan.yml` | Push/PR | npm audit vulnerability scan |
+| `terraform-plan.yml` | PR | Terraform plan output |
 
 ---
 
@@ -568,46 +478,45 @@ make docker-down # Stop Docker containers
 
 | Guide | Description |
 |-------|-------------|
-| [BEGINNER_DEPLOYMENT_GUIDE.md](./docs/BEGINNER_DEPLOYMENT_GUIDE.md) | AWS deployment for beginners (step-by-step with screenshots) |
-| [DEPLOYMENT_GUIDE_GUI.md](./docs/DEPLOYMENT_GUIDE_GUI.md) | CloudFormation GUI deployment walkthrough |
-| [EC2_DEPLOYMENT_GUIDE.md](./docs/EC2_DEPLOYMENT_GUIDE.md) | Single EC2 instance deployment |
-| [GITHUB_WORKFLOW.md](./docs/GITHUB_WORKFLOW.md) | CI/CD pipeline and GitHub Actions |
-| [TEAM_ROLES.md](./docs/TEAM_ROLES.md) | Team roles and responsibilities |
-| [ai-features.md](./docs/ai-features.md) | AI feature integration details |
-| [Project_Tech_Stack_Explained.md](./Project_Tech_Stack_Explained.md) | Full tech stack explanation |
+| [BEGINNER_DEPLOYMENT_GUIDE.md](./docs/BEGINNER_DEPLOYMENT_GUIDE.md) | AWS deployment for beginners |
+| [EC2_DEPLOYMENT_GUIDE.md](./docs/EC2_DEPLOYMENT_GUIDE.md) | Single EC2 instance setup |
+| [DEPLOYMENT_GUIDE_CLOUDFORMATION.md](./docs/DEPLOYMENT_GUIDE_CLOUDFORMATION.md) | CloudFormation deployment |
+| [DEPLOYMENT_GUIDE_TERRAFORM.md](./docs/DEPLOYMENT_GUIDE_TERRAFORM.md) | Terraform deployment |
+| [GITHUB_WORKFLOW.md](./docs/GITHUB_WORKFLOW.md) | CI/CD pipeline details |
+| [TEAM_ROLES.md](./docs/TEAM_ROLES.md) | Team roles & responsibilities |
+| [ai-features.md](./docs/ai-features.md) | AI feature documentation |
+| [iam-roles.md](./docs/iam-roles.md) | AWS IAM configuration |
 
 ---
 
 ## 🔮 Roadmap
 
-- [ ] Google Maps integration (enhanced routing + traffic)
+- [ ] Google Maps integration (enhanced routing)
 - [ ] Push notifications (Firebase FCM)
 - [ ] In-app payments (Razorpay / Stripe)
-- [ ] Regional language support (Telugu, Hindi via Sarvam AI)
-- [ ] Mobile app (React Native)
-- [ ] Referral and loyalty rewards system
-- [ ] Worker background check integration
+- [ ] Regional language support (Telugu, Hindi, Tamil)
+- [ ] React Native mobile app
+- [ ] Referral & loyalty rewards system
+- [ ] Worker earnings analytics dashboard
+- [ ] Customer subscription plans
 
 ---
 
-## 🤝 Contributing
+## 👥 Team
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m 'feat: add your feature'`
-4. Push to the branch: `git push origin feature/your-feature`
-5. Open a Pull Request
-
-See [GITHUB_WORKFLOW.md](./docs/GITHUB_WORKFLOW.md) for the full contribution guide.
+| Role | Contributor |
+|------|------------|
+| Full Stack Developer | Gowtham Kota |
 
 ---
 
 ## ⚠️ Security Notice
 
-- **Never commit `.env` or `*.pem` files** to the repository (`.gitignore` covers this)
-- In production, all secrets are managed via **AWS Secrets Manager** — no plaintext credentials
-- Aadhaar documents are stored in a **private S3 bucket** with no public access
-- All API routes are rate-limited and validated with `express-validator`
+- **Never commit** `.env`, `*.pem`, or AWS credentials (covered by `.gitignore`)
+- Production secrets managed via **AWS Secrets Manager**
+- Aadhaar documents stored in **private uploads/** directory
+- All API routes are rate-limited, validated, and JWT-protected
+- Docker runs as **non-root user** (`appuser`)
 
 ---
 
@@ -617,4 +526,7 @@ MIT © 2025 ServiConnect | Smart Local On-Demand Services Platform
 
 ---
 
-*Built with ❤️ using Node.js, PostgreSQL, AWS, and Socket.io*
+<p align="center">
+  Built with ❤️ using Node.js, PostgreSQL, AWS, and Socket.io<br>
+  <a href="https://serviconnect.me">serviconnect.me</a>
+</p>

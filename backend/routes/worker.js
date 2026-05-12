@@ -202,7 +202,7 @@ router.patch('/jobs/:id/complete', async (req, res, next) => {
 router.get('/verification-status', async (req, res, next) => {
   try {
     const worker = await db.Worker.findByPk(req.user.id, {
-      attributes: ['verificationStatus', 'isVerified', 'faceMatchConfidence', 'verificationNotes', 'aadhaarNumber']
+      attributes: ['verificationStatus', 'isVerified', 'verificationNotes', 'aadhaarNumber']
     });
     if (!worker) return res.status(404).json({ success: false, message: 'Worker not found.' });
 
@@ -211,7 +211,6 @@ router.get('/verification-status', async (req, res, next) => {
       data: {
         verificationStatus: worker.verificationStatus,
         isVerified: worker.isVerified,
-        faceMatchConfidence: worker.faceMatchConfidence,
         aadhaarNumberMasked: maskAadhaar(worker.aadhaarNumber),
         notes: worker.verificationNotes,
       }

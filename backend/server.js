@@ -58,9 +58,10 @@ async function startServer() {
 
   // ── Serve Frontend Static Files ───────────────────────────────
   app.use(express.static(path.join(__dirname, '../frontend/public')));
-
-  // ── Serve Uploaded Files (local dev — replace with S3 in prod)
+  // ── Serve Uploaded Files (profile photos, Aadhaar docs, etc.) ─
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 
   // ── API Routes ────────────────────────────────────────────────
   app.use('/api/auth',     authRoutes);

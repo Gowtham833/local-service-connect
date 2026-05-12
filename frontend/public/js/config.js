@@ -7,7 +7,7 @@
  * DO NOT hardcode real API URLs or IDs here.
  */
 window.__SERVICONNECT_CONFIG__ = window.__SERVICONNECT_CONFIG__ || {
-  API_BASE_URL: 'http://54.211.227.127',
+  API_BASE_URL: 'https://serviconnect.me',
   COGNITO_USER_POOL_ID: '',
   COGNITO_CLIENT_ID: '',
   AWS_REGION: 'us-east-1',

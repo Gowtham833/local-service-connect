@@ -1,6 +1,7 @@
 const { db } = require('../models/index');
 const { receiveMessages, deleteMessage } = require('../services/sqsService');
 const { broadcastNewJob } = require('../services/socketService');
+const { sendJobNotificationSMS } = require('../services/smsService');
 
 // SQS Queue URL from environment (can be dummy if USE_LOCAL_SQS=true)
 const DB_WRITE_QUEUE_URL = process.env.DB_WRITE_QUEUE_URL || 'https://sqs.us-east-1.amazonaws.com/123456789012/ServiConnect-DB-Writes-Queue';
@@ -32,6 +33,27 @@ async function processMessage(message) {
         });
 
         console.log(`[DB Worker] Processed CREATE_BOOKING for booking ${bookingId}`);
+
+        // ── Notify matched workers via SMS (async, non-blocking) ──
+        if (payload.aiMatchedWorkerIds && payload.aiMatchedWorkerIds.length > 0) {
+          const workerIdsToNotify = payload.aiMatchedWorkerIds.slice(0, 5);
+          (async () => {
+            try {
+              const workers = await db.Worker.findAll({
+                where: { id: workerIdsToNotify },
+                attributes: ['id', 'phone', 'firstName'],
+              });
+              for (const w of workers) {
+                if (w.phone) {
+                  await sendJobNotificationSMS(w.phone, payload.service, payload.address || '');
+                }
+              }
+              console.log(`[DB Worker] SMS alerts sent to ${workers.length} matched workers.`);
+            } catch (smsErr) {
+              console.error('[DB Worker] SMS notification error:', smsErr.message);
+            }
+          })();
+        }
       } else {
         console.log(`[DB Worker] Booking ${bookingId} already exists. Skipping.`);
       }

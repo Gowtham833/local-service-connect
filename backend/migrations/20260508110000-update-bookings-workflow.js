@@ -1,30 +1,27 @@
 'use strict';
 
+/** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    // Add lat/lng to Bookings table if they don't exist
-    const tableInfo = await queryInterface.describeTable('bookings');
-    
-    if (!tableInfo.lat) {
-      await queryInterface.addColumn('bookings', 'lat', {
-        type: Sequelize.FLOAT,
-        allowNull: true
-      });
-    }
-    
-    if (!tableInfo.lng) {
-      await queryInterface.addColumn('bookings', 'lng', {
-        type: Sequelize.FLOAT,
-        allowNull: true
-      });
-    }
+  async up(queryInterface, Sequelize) {
+    // Add lat and lng to bookings
+    await queryInterface.addColumn('bookings', 'lat', {
+      type: Sequelize.FLOAT,
+      allowNull: true
+    });
+    await queryInterface.addColumn('bookings', 'lng', {
+      type: Sequelize.FLOAT,
+      allowNull: true
+    });
 
-    // Ensure the status ENUM includes 'accepted' and 'cancelled' if not present
-    // Note: This is a simplified check for the workflow fixes
+    // Update status ENUM to include 'accepted' and 'in_progress'
+    // Note: Postgres ENUM updates can be tricky. We use raw SQL for reliability.
+    await queryInterface.sequelize.query('ALTER TYPE "enum_bookings_status" ADD VALUE IF NOT EXISTS \'accepted\'');
+    await queryInterface.sequelize.query('ALTER TYPE "enum_bookings_status" ADD VALUE IF NOT EXISTS \'in_progress\'');
   },
 
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn('Bookings', 'lat');
-    await queryInterface.removeColumn('Bookings', 'lng');
+  async down(queryInterface, Sequelize) {
+    await queryInterface.removeColumn('bookings', 'lat');
+    await queryInterface.removeColumn('bookings', 'lng');
+    // Note: Dropping ENUM values is not supported by Postgres easily.
   }
 };

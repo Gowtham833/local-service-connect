@@ -37,8 +37,8 @@
   .user-msg{background:linear-gradient(135deg, #8B5CF6, #E85D75);color:#fff;padding:12px 16px;border-radius:18px 18px 4px 18px;max-width:85%;align-self:flex-end;font-size:14px;line-height:1.6;box-shadow:0 4px 12px rgba(139,92,246,0.3)}
   #servibot-input-row{padding:16px;display:flex;gap:10px;background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.05)}
   #servibot-input{flex:1;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 16px;color:#fff;font-size:14px;outline:none;transition:border 0.2s}
-  #servibot-input:focus{border-color:var(--orange)}
-  #servibot-send{background:var(--orange);color:#fff;border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all 0.2s}
+  #servibot-input:focus{border-color:#8B5CF6}
+  #servibot-send{background:#8B5CF6;color:#fff;border:none;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:all 0.2s}
   #servibot-send:hover{transform:scale(1.05);filter:brightness(1.1)}`;
 
   // Inject HTML + CSS

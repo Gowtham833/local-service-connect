@@ -77,4 +77,40 @@ async function sendOTP(phone, otp, purpose = 'verification') {
   return { success: true, method: 'console' };
 }
 
-module.exports = { sendOTP, formatPhone };
+/**
+ * Send job notification SMS to a worker
+ * @param {string} phone - Worker's phone number
+ * @param {string} service - Service type (e.g. "Plumbing")
+ * @param {string} address - Job address/area
+ */
+async function sendJobNotificationSMS(phone, service, address) {
+  const formattedPhone = formatPhone(phone);
+  const locationInfo = address ? ` near ${address}` : '';
+  const message = `[ServiConnect] New ${service} job request${locationInfo}! Log in to accept: http://54.211.227.127/pages/worker-login.html`;
+
+  console.log(`[SMS] Job notification → ${formattedPhone}: ${service}`);
+
+  if (SMS_ENABLED && snsClient) {
+    try {
+      const result = await snsClient.send(new PublishCommand({
+        PhoneNumber: formattedPhone,
+        Message: message,
+        MessageAttributes: {
+          'AWS.SNS.SMS.SMSType': {
+            DataType: 'String',
+            StringValue: 'Transactional',
+          },
+        },
+      }));
+      console.log(`[SMS] ✅ Job alert sent to ${formattedPhone} — MessageId: ${result.MessageId}`);
+      return { success: true, messageId: result.MessageId };
+    } catch (err) {
+      console.error(`[SMS] ❌ Job alert failed for ${formattedPhone}:`, err.message);
+      return { success: false, error: err.message };
+    }
+  }
+
+  return { success: true, method: 'console' };
+}
+
+module.exports = { sendOTP, formatPhone, sendJobNotificationSMS };

@@ -6,8 +6,7 @@ const { body, validationResult } = require('express-validator');
 const { db }   = require('../models/index');
 const { signToken } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimiter');
-const { saveBase64Image } = require('../services/uploadService');
-const { compareFaces } = require('../services/faceMatchService');
+
 const { sendOTP } = require('../services/smsService');
 
 // Apply strict rate limit to all auth routes
@@ -37,10 +36,10 @@ router.post('/register/send-otp', async (req, res, next) => {
     await db.PasswordResetToken.update({ used: true }, { where: { phone, role, used: false } });
     await db.PasswordResetToken.create({ phone, role, otp, expiresAt });
     
-    await sendOTP(phone, otp, 'registration');
+    const smsResult = await sendOTP(phone, otp, 'registration');
     
     const response = { success: true, message: 'Verification code sent successfully.' };
-    if (process.env.SMS_ENABLED !== 'true') {
+    if (process.env.SMS_ENABLED !== 'true' || smsResult.success === false) {
       response._devOtp = otp;
     }
 
@@ -113,31 +112,13 @@ router.post('/login/send-otp', async (req, res, next) => {
 // ── POST /api/auth/customer/login ─────────────────────────────
 router.post('/customer/login', async (req, res, next) => {
   try {
-    const { phone, otp } = req.body;
+    const { phone, password } = req.body;
     
-    // Verify OTP
-    const tokenRecord = await db.PasswordResetToken.findOne({
-      where: { phone, role: 'customer', used: false },
-      order: [['created_at', 'DESC']]
-    });
-
-    if (!tokenRecord || tokenRecord.expiresAt < new Date()) {
-      return res.status(400).json({ success: false, message: 'OTP is invalid or expired.' });
-    }
-    if (tokenRecord.attempts >= 3) {
-      return res.status(400).json({ success: false, message: 'Too many failed attempts. Request a new OTP.' });
-    }
-
-    if (tokenRecord.otp !== otp) {
-      await tokenRecord.increment('attempts');
-      return res.status(400).json({ success: false, message: 'Incorrect OTP.' });
-    }
-
-    await tokenRecord.update({ used: true });
-
-    // Login successful
     const customer = await db.Customer.findOne({ where: { phone } });
     if (!customer) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+
+    const isValid = await bcrypt.compare(password, customer.passwordHash);
+    if (!isValid) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
 
     const token = signToken(customer.id, 'customer');
     const { passwordHash: _, ...safe } = customer.toJSON();
@@ -208,7 +189,6 @@ router.post('/worker/register', registerValidation, async (req, res, next) => {
       liveSelfieImageUrl: null,
       profilePhotoUrl: null,
       verificationStatus,
-      faceMatchConfidence: null,
       isVerified: false,
     });
 
@@ -221,31 +201,13 @@ router.post('/worker/register', registerValidation, async (req, res, next) => {
 // ── POST /api/auth/worker/login ───────────────────────────────
 router.post('/worker/login', async (req, res, next) => {
   try {
-    const { phone, otp } = req.body;
+    const { phone, password } = req.body;
     
-    // Verify OTP
-    const tokenRecord = await db.PasswordResetToken.findOne({
-      where: { phone, role: 'worker', used: false },
-      order: [['created_at', 'DESC']]
-    });
-
-    if (!tokenRecord || tokenRecord.expiresAt < new Date()) {
-      return res.status(400).json({ success: false, message: 'OTP is invalid or expired.' });
-    }
-    if (tokenRecord.attempts >= 3) {
-      return res.status(400).json({ success: false, message: 'Too many failed attempts. Request a new OTP.' });
-    }
-
-    if (tokenRecord.otp !== otp) {
-      await tokenRecord.increment('attempts');
-      return res.status(400).json({ success: false, message: 'Incorrect OTP.' });
-    }
-
-    await tokenRecord.update({ used: true });
-
-    // Login successful
     const worker = await db.Worker.findOne({ where: { phone } });
     if (!worker) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+
+    const isValid = await bcrypt.compare(password, worker.passwordHash);
+    if (!isValid) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
 
     const token = signToken(worker.id, 'worker');
     const { passwordHash: _, aadhaarNumber: __, aadhaarFrontImageUrl: _a, aadhaarBackImageUrl: _b, ...safe } = worker.toJSON();
@@ -257,8 +219,12 @@ router.post('/worker/login', async (req, res, next) => {
 router.post('/admin/login', async (req, res, next) => {
   try {
     const { username, password } = req.body;
-    const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminUser = process.env.ADMIN_USERNAME;
+    const adminPass = process.env.ADMIN_PASSWORD;
+
+    if (!adminUser || !adminPass) {
+      return res.status(500).json({ success: false, message: 'Server configuration error: Admin credentials not set.' });
+    }
 
     if (username !== adminUser || password !== adminPass) {
       return res.status(401).json({ success: false, message: 'Invalid admin credentials.' });
@@ -305,12 +271,18 @@ router.post('/forgot-password', async (req, res, next) => {
     // Store OTP
     await db.PasswordResetToken.create({ phone, role, otp, expiresAt });
 
-    await sendOTP(phone, otp, 'reset');
+    const smsResult = await sendOTP(phone, otp, 'reset');
 
-    res.json({
+    const response = {
       success: true,
       message: 'OTP sent successfully to your registered phone.',
-    });
+    };
+    
+    if (process.env.SMS_ENABLED !== 'true' || smsResult.success === false) {
+      response._devOtp = otp;
+    }
+
+    res.json(response);
   } catch (err) { next(err); }
 });
 

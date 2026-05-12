@@ -122,7 +122,18 @@
 <div class="bg-animation"></div>
 <div class="bg-overlay"></div>
 
-<div class="glass-container">
+<!-- Floating decorative icons -->
+<div style="position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0">
+  <span style="position:absolute;top:12%;left:5%;font-size:2.5rem;opacity:0.08;animation:floatIcon 7s ease-in-out infinite">🔧</span>
+  <span style="position:absolute;top:22%;right:7%;font-size:2rem;opacity:0.06;animation:floatIcon 9s ease-in-out infinite 1s">⚡</span>
+  <span style="position:absolute;top:60%;left:3%;font-size:1.8rem;opacity:0.07;animation:floatIcon 8s ease-in-out infinite 2s">💧</span>
+  <span style="position:absolute;top:78%;right:5%;font-size:2.2rem;opacity:0.06;animation:floatIcon 6s ease-in-out infinite 0.5s">🎨</span>
+  <span style="position:absolute;top:45%;left:2%;font-size:1.5rem;opacity:0.05;animation:floatIcon 10s ease-in-out infinite 3s">❄️</span>
+  <span style="position:absolute;top:88%;left:48%;font-size:1.6rem;opacity:0.06;animation:floatIcon 7s ease-in-out infinite 1.5s">📍</span>
+</div>
+<style>@keyframes floatIcon{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-18px) rotate(5deg)}}</style>
+
+<div class="glass-container" style="position:relative;z-index:1">
   <div class="header">
     <h1>Servi<span>Connect</span></h1>
     <p>Worker Portal — Join the network</p>
@@ -137,35 +148,19 @@
   <div id="login-form">
     <div id="loginError" class="error-msg"></div>
 
-    <!-- Step 1: Phone -->
-    <div id="loginStep1">
-      <div class="form-group">
-        <label>Phone Number</label>
-        <input type="tel" id="loginPhone" class="form-input" placeholder="9876543210 (demo: 9123456789)">
-      </div>
-      <a class="forgot" onclick="openForgotPassword()">Forgot Password?</a>
-      <button class="submit-btn" id="sendOtpBtn" onclick="sendLoginOTP()">Continue →</button>
-      <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);text-align:center;margin-top:20px">Demo: phone <strong style="color:#fff">9123456789</strong></p>
+    <div class="form-group">
+      <label>Phone Number</label>
+      <input type="tel" id="loginPhone" class="form-input" placeholder="9876543210 (demo: 9123456789)">
+    </div>
+    
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" class="form-input" placeholder="Enter your password">
     </div>
 
-    <!-- Step 2: OTP -->
-    <div id="loginStep2" style="display:none">
-      <div class="form-group">
-        <label style="text-align:center">Enter 6-Digit OTP</label>
-        <div class="otp-container">
-          <input type="text" class="otp-input login-otp" maxlength="1" data-index="0">
-          <input type="text" class="otp-input login-otp" maxlength="1" data-index="1">
-          <input type="text" class="otp-input login-otp" maxlength="1" data-index="2">
-          <input type="text" class="otp-input login-otp" maxlength="1" data-index="3">
-          <input type="text" class="otp-input login-otp" maxlength="1" data-index="4">
-          <input type="text" class="otp-input login-otp" maxlength="1" data-index="5">
-        </div>
-      </div>
-      <button class="submit-btn" id="loginBtn" onclick="doLogin()">Verify & Login →</button>
-      <p style="text-align:center;margin-top:20px;font-size:0.9rem">
-        <a onclick="showLoginStep(1)" style="color:var(--teal);cursor:pointer">← Change Phone Number</a>
-      </p>
-    </div>
+    <a class="forgot" onclick="openForgotPassword()">Forgot Password?</a>
+    <button class="submit-btn" id="loginBtn" onclick="doLogin()">Login →</button>
+    <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);text-align:center;margin-top:20px">Demo: phone <strong style="color:#fff">9123456789</strong>, password <strong style="color:#fff">password123</strong></p>
   </div>
 
   <!-- SIGNUP FORM -->
@@ -308,7 +303,7 @@
 </div>
 
 <script src="/js/config.js?v=2"></script>
-<script src="/js/api.js"></script>
+<script src="/js/api.js?v=3"></script>
 <script>
 if (Auth.isLoggedIn()) Auth.redirectToDashboard();
 
@@ -393,64 +388,25 @@ async function resetPassword() {
   else showToast(data.message||'Failed.','error');
 }
 
-function showLoginStep(step) {
-  document.getElementById('loginStep1').style.display = step === 1 ? 'block' : 'none';
-  document.getElementById('loginStep2').style.display = step === 2 ? 'block' : 'none';
-  if (step === 2) setupLoginOTPInputs();
-}
-
-function setupLoginOTPInputs() {
-  const inputs = document.querySelectorAll('.login-otp');
-  inputs.forEach((inp, i) => {
-    inp.value = '';
-    inp.addEventListener('input', (e) => {
-      if (e.target.value && i < inputs.length - 1) inputs[i + 1].focus();
-      e.target.classList.toggle('filled', !!e.target.value);
-    });
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus();
-    });
-  });
-  setTimeout(() => inputs[0].focus(), 100);
-}
-
-async function sendLoginOTP() {
-  const phone = document.getElementById('loginPhone').value.trim();
-  if (!phone) { showError('loginError', 'Please enter your phone number.'); return; }
-  
-  const btn = document.getElementById('sendOtpBtn');
-  btn.disabled = true; btn.textContent = 'Sending OTP…';
-  
-  const { ok, data } = await AuthAPI.sendLoginOTP(phone, 'worker');
-  btn.disabled = false; btn.textContent = 'Continue →';
-
-  if (ok) {
-    showToast('✅ OTP sent! Check your phone.');
-    if (data._devOtp) showToast(`[DEV] OTP: ${data._devOtp}`, 'info');
-    showLoginStep(2);
-  } else {
-    showError('loginError', data.message || 'Failed to send OTP.');
-  }
-}
-
+// ── Login ─────────────────────────────────────────
 async function doLogin() {
   const phone = document.getElementById('loginPhone').value.trim();
-  const otp   = [...document.querySelectorAll('.login-otp')].map(i => i.value).join('');
+  const password = document.getElementById('loginPass').value;
   
   document.getElementById('loginError').style.display = 'none';
-  if (otp.length !== 6) { showError('loginError', 'Please enter all 6 digits.'); return; }
+  if (!phone || !password) { showError('loginError', 'Please enter phone and password.'); return; }
 
   const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'Verifying…';
-  const { ok, data } = await AuthAPI.workerLogin(phone, otp);
-  btn.disabled = false; btn.textContent = 'Verify & Login →';
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  const { ok, data } = await AuthAPI.workerLogin(phone, password);
+  btn.disabled = false; btn.textContent = 'Login →';
 
   if (ok) {
     Auth.save(data.token, data.role, data.user);
-    showToast('✅ Welcome, ' + data.user.firstName + '!');
+    showToast('✅ Welcome back, ' + data.user.firstName + '!');
     setTimeout(() => window.location.href = '/pages/worker-dashboard.html', 800);
   } else {
-    showError('loginError', data.message || 'Login failed. Invalid OTP.');
+    showError('loginError', data.message || 'Login failed.');
   }
 }
 
