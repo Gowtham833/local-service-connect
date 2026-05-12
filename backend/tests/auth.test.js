@@ -47,9 +47,15 @@ afterAll(async () => { await sequelize.close(); });
 
 describe('POST /api/auth/customer/register', () => {
   it('registers a new customer', async () => {
+    const phone = '9000000001';
+    const otp = '123456';
+    // Pre-create OTP record
+    const { db } = require('../models/index');
+    await db.PasswordResetToken.create({ phone, role: 'customer', otp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) });
+
     const res = await request(app).post('/api/auth/customer/register').send({
-      firstName: 'Test', lastName: 'User', phone: '9000000001',
-      email: 'test@example.com', password: 'password123',
+      firstName: 'Test', lastName: 'User', phone,
+      email: 'test@example.com', password: 'password123', otp
     });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -58,11 +64,20 @@ describe('POST /api/auth/customer/register', () => {
   });
 
   it('rejects duplicate phone', async () => {
+    const phone = '9000000002';
+    const otp = '888999';
+    const { db } = require('../models/index');
+    await db.PasswordResetToken.create({ phone, role: 'customer', otp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) });
+
     await request(app).post('/api/auth/customer/register').send({
-      firstName: 'Dup', phone: '9000000002', password: 'password123',
+      firstName: 'Dup', phone, password: 'password123', otp
     });
+    
+    // Create another OTP for the second attempt
+    await db.PasswordResetToken.create({ phone, role: 'customer', otp: '111111', expiresAt: new Date(Date.now() + 5 * 60 * 1000) });
+    
     const res = await request(app).post('/api/auth/customer/register').send({
-      firstName: 'Dup', phone: '9000000002', password: 'password123',
+      firstName: 'Dup', phone, password: 'password123', otp: '111111'
     });
     expect(res.status).toBe(409);
     expect(res.body.success).toBe(false);
@@ -84,34 +99,44 @@ describe('POST /api/auth/customer/login', () => {
   });
 
   it('logs in with correct credentials', async () => {
+    const phone = '9111111111';
+    const otp = '654321';
+    const { db } = require('../models/index');
+    await db.PasswordResetToken.create({ phone, role: 'customer', otp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) });
+
     const res = await request(app).post('/api/auth/customer/login').send({
-      phone: '9111111111', password: 'mypassword',
+      phone, otp,
     });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.token).toBeDefined();
   });
 
-  it('rejects wrong password', async () => {
+  it('rejects incorrect OTP', async () => {
     const res = await request(app).post('/api/auth/customer/login').send({
-      phone: '9111111111', password: 'wrongpassword',
+      phone: '9111111111', otp: 'wrong',
     });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(400);
   });
 
-  it('rejects unknown phone', async () => {
+  it('rejects unknown phone (no OTP request)', async () => {
     const res = await request(app).post('/api/auth/customer/login').send({
-      phone: '0000000000', password: 'anything',
+      phone: '0000000000', otp: '123456',
     });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(400);
   });
 });
 
 describe('POST /api/auth/worker/register', () => {
   it('registers a new worker', async () => {
+    const phone = '9222222222';
+    const otp = '111222';
+    const { db } = require('../models/index');
+    await db.PasswordResetToken.create({ phone, role: 'worker', otp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) });
+
     const res = await request(app).post('/api/auth/worker/register').send({
-      firstName: 'Worker', phone: '9222222222',
-      skills: ['Plumbing'], password: 'workerpass123',
+      firstName: 'Worker', phone,
+      skills: ['Plumbing'], password: 'workerpass123', otp
     });
     expect(res.status).toBe(201);
     expect(res.body.role).toBe('worker');
