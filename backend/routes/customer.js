@@ -179,7 +179,8 @@ router.get('/bookings', async (req, res, next) => {
       }
       // Determine if review is enabled
       json.reviewEnabled = json.status === 'completed' 
-        && json.completionPhotoUrls && json.completionPhotoUrls.length > 0
+        && json.beforeWorkPhotoUrls && json.beforeWorkPhotoUrls.length > 0
+        && json.afterWorkPhotoUrls && json.afterWorkPhotoUrls.length > 0
         && json.issuePhotoUrls && json.issuePhotoUrls.length > 0
         && !json.review;
       return json;
@@ -200,8 +201,11 @@ router.patch('/bookings/:id/rate', async (req, res, next) => {
     if (!booking.issuePhotoUrls || booking.issuePhotoUrls.length === 0) {
       return res.status(400).json({ success: false, message: 'Issue photos are required before rating.' });
     }
-    if (!booking.completionPhotoUrls || booking.completionPhotoUrls.length === 0) {
-      return res.status(400).json({ success: false, message: 'Worker has not uploaded completion photos yet. Rating is not available.' });
+    if (!booking.beforeWorkPhotoUrls || booking.beforeWorkPhotoUrls.length === 0) {
+      return res.status(400).json({ success: false, message: 'Worker has not uploaded "Before Work" photos. Rating is not available.' });
+    }
+    if (!booking.afterWorkPhotoUrls || booking.afterWorkPhotoUrls.length === 0) {
+      return res.status(400).json({ success: false, message: 'Worker has not uploaded "After Work" photos. Rating is not available.' });
     }
 
     // Check if already reviewed
@@ -263,6 +267,33 @@ router.patch('/location', async (req, res, next) => {
     const { lat, lng } = req.body;
     await db.Customer.update({ lat, lng }, { where: { id: req.user.id } });
     res.json({ success: true, lat, lng });
+  } catch (err) { next(err); }
+});
+
+// ── PATCH /api/customer/profile ─────────────────────────────
+router.patch('/profile', async (req, res, next) => {
+  try {
+    const { firstName, lastName, profilePhoto } = req.body;
+    
+    let updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    
+    if (profilePhoto) {
+      const { saveBase64Image } = require('../services/uploadService');
+      updateData.profilePhotoUrl = saveBase64Image(profilePhoto, 'profiles', req.user.id.substring(0, 8));
+    }
+    
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: 'No data provided to update.' });
+    }
+    
+    await db.Customer.update(updateData, { where: { id: req.user.id } });
+    
+    // Fetch updated customer to return new photo URL
+    const updatedCustomer = await db.Customer.findByPk(req.user.id, { attributes: ['firstName', 'lastName', 'profilePhotoUrl'] });
+    
+    res.json({ success: true, message: 'Profile updated successfully', data: updatedCustomer });
   } catch (err) { next(err); }
 });
 

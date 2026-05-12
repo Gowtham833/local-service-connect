@@ -163,26 +163,31 @@ router.patch('/jobs/:id/complete', async (req, res, next) => {
     const booking = await db.Booking.findOne({ where: { id: req.params.id, workerId: req.user.id } });
     if (!booking) return res.status(404).json({ success: false, message: 'Job not found.' });
 
-    const { completionPhotos, completionNotes } = req.body;
+    const { beforeWorkPhotos, afterWorkPhotos, completionNotes } = req.body;
 
-    // Require at least one completion photo
-    if (!completionPhotos || !Array.isArray(completionPhotos) || completionPhotos.length === 0) {
-      return res.status(400).json({ success: false, message: 'At least one completion photo is required. Please upload a photo of the completed work.' });
+    // Require both before and after photos
+    if (!beforeWorkPhotos || !Array.isArray(beforeWorkPhotos) || beforeWorkPhotos.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one "Before Work" photo is required.' });
+    }
+    if (!afterWorkPhotos || !Array.isArray(afterWorkPhotos) || afterWorkPhotos.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one "After Work" photo is required.' });
     }
 
-    if (completionPhotos.length > 3) {
-      return res.status(400).json({ success: false, message: 'Maximum 3 completion photos allowed.' });
+    if (beforeWorkPhotos.length > 3 || afterWorkPhotos.length > 3) {
+      return res.status(400).json({ success: false, message: 'Maximum 3 photos allowed per category.' });
     }
 
-    // Save completion photos
-    const completionPhotoUrls = saveMultipleBase64Images(completionPhotos, 'completions', req.user.id.substring(0, 8));
+    // Save photos
+    const beforeWorkPhotoUrls = saveMultipleBase64Images(beforeWorkPhotos, 'completions', req.user.id.substring(0, 8) + '_before');
+    const afterWorkPhotoUrls = saveMultipleBase64Images(afterWorkPhotos, 'completions', req.user.id.substring(0, 8) + '_after');
     
     const price = parseFloat(req.body.price) || 0;
     await booking.update({ 
       status: 'completed', 
       completedAt: new Date(), 
       price,
-      completionPhotoUrls,
+      beforeWorkPhotoUrls,
+      afterWorkPhotoUrls,
       completionNotes: completionNotes || null,
     });
     
@@ -211,6 +216,33 @@ router.get('/verification-status', async (req, res, next) => {
         notes: worker.verificationNotes,
       }
     });
+  } catch (err) { next(err); }
+});
+
+// ── PATCH /api/worker/profile ─────────────────────────────
+router.patch('/profile', async (req, res, next) => {
+  try {
+    const { firstName, lastName, profilePhoto } = req.body;
+    
+    let updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    
+    if (profilePhoto) {
+      const { saveBase64Image } = require('../services/uploadService');
+      updateData.profilePhotoUrl = saveBase64Image(profilePhoto, 'profiles', req.user.id.substring(0, 8));
+    }
+    
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: 'No data provided to update.' });
+    }
+    
+    await db.Worker.update(updateData, { where: { id: req.user.id } });
+    
+    // Fetch updated worker to return new photo URL
+    const updatedWorker = await db.Worker.findByPk(req.user.id, { attributes: ['firstName', 'lastName', 'profilePhotoUrl'] });
+    
+    res.json({ success: true, message: 'Profile updated successfully', data: updatedWorker });
   } catch (err) { next(err); }
 });
 

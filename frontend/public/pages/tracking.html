@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Tracking — ServiConnect</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/shared.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+<style>
+  body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: #0A0E1A; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  .header { padding: 16px 24px; background: rgba(10, 14, 26, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.5rem; }
+  .logo span { color: var(--teal); }
+  
+  #map { flex: 1; width: 100%; z-index: 1; }
+  
+  .tracker-overlay {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    width: 90%; max-width: 400px; background: rgba(22, 35, 54, 0.95);
+    backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px; padding: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    z-index: 1000; animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 40px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  
+  .eta-badge { background: rgba(0,212,255,0.15); color: var(--teal-light); padding: 6px 12px; border-radius: 50px; font-weight: 600; font-size: 0.85rem; display: inline-block; margin-bottom: 12px; border: 1px solid rgba(0,212,255,0.3); }
+  
+  .worker-info { display: flex; align-items: center; gap: 15px; margin-bottom: 16px; }
+  .worker-avatar { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--orange); object-fit: cover; background: var(--navy-mid); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+  .worker-name { font-weight: 700; font-size: 1.1rem; }
+  .worker-details { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+  
+  .actions { display: flex; gap: 10px; }
+  .btn-call { flex: 1; background: var(--teal); color: #000; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; transition: transform 0.2s; }
+  .btn-call:hover { transform: scale(1.02); }
+  
+  .loading-overlay { position: fixed; inset: 0; background: #0A0E1A; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loader">
+  <div class="loader"><div class="spinner"></div></div>
+  <div style="margin-top:20px;color:var(--text-dim);font-weight:600">Connecting to live GPS...</div>
+</div>
+
+<div class="header">
+  <div class="logo">Servi<span>Connect</span></div>
+  <div style="font-size:0.85rem;color:var(--text-dim);display:flex;align-items:center;gap:6px">
+    <div style="width:8px;height:8px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e"></div> Live Tracking
+  </div>
+</div>
+
+<div id="map"></div>
+
+<div class="tracker-overlay" id="trackerInfo" style="display:none">
+  <div class="eta-badge" id="etaText">Locating worker...</div>
+  <div class="worker-info">
+    <div class="worker-avatar" id="wAvatar">👷</div>
+    <div>
+      <div class="worker-name" id="wName">Loading...</div>
+      <div class="worker-details" id="wDetails">⭐ — | Service Provider</div>
+    </div>
+  </div>
+  <div class="actions">
+    <a href="#" id="callBtn" class="btn-call">📞 Call Worker</a>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+<script src="/js/config.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const bookingId = urlParams.get('id');
+
+if (!bookingId) {
+  document.getElementById('loader').innerHTML = '<h2>Invalid Tracking Link</h2><p>Booking ID is missing.</p>';
+} else {
+  initTracking();
+}
+
+let map, workerMarker, customerMarker, routeControl, socket;
+let cLat, cLng;
+
+async function initTracking() {
+  // Fetch initial tracking data
+  try {
+    const res = await fetch(`${window.__SERVICONNECT_CONFIG__.API_BASE_URL}/api/location/booking/${bookingId}`);
+    const data = await res.json();
+    
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('trackerInfo').style.display = 'block';
+    
+    // We expect the backend to provide basic booking details or we get it via socket
+    // For this simple page, we just initialize the map
+    initMap();
+    
+    // Attempt to get customer location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        cLat = pos.coords.latitude;
+        cLng = pos.coords.longitude;
+        updateCustomerMarker();
+      });
+    }
+    
+    connectSocket();
+  } catch (err) {
+    document.getElementById('loader').innerHTML = '<h2>Error connecting to tracking service</h2>';
+  }
+}
+
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView([20.5937, 78.9629], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+}
+
+function updateCustomerMarker() {
+  if (!cLat || !cLng) return;
+  if (customerMarker) map.removeLayer(customerMarker);
+  customerMarker = L.marker([cLat, cLng], {
+    icon: L.divIcon({
+      html: '<div style="background:#8B5CF6;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px #8B5CF6"></div>',
+      className: ''
+    })
+  }).addTo(map);
+  
+  if (!workerMarker) {
+    map.setView([cLat, cLng], 14);
+  } else {
+    updateRoute();
+  }
+}
+
+function updateWorkerMarker(lat, lng) {
+  if (workerMarker) map.removeLayer(workerMarker);
+  workerMarker = L.marker([lat, lng], {
+    icon: L.divIcon({
+      html: '<div style="background:#00D4FF;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 20px #00D4FF"></div>',
+      className: ''
+    })
+  }).addTo(map);
+  
+  if (cLat && cLng) {
+    updateRoute();
+  } else {
+    map.setView([lat, lng], 15);
+  }
+}
+
+function updateRoute() {
+  if (!cLat || !cLng || !workerMarker) return;
+  const wPos = workerMarker.getLatLng();
+  const cPos = L.latLng(cLat, cLng);
+  
+  if (routeControl) {
+    routeControl.setWaypoints([wPos, cPos]);
+  } else {
+    routeControl = L.Routing.control({
+      waypoints: [wPos, cPos],
+      addWaypoints: false, draggableWaypoints: false,
+      fitSelectedRoutes: true, show: false,
+      createMarker: () => null
+    }).addTo(map);
+  }
+  
+  // Calculate ETA
+  const dist = wPos.distanceTo(cPos) / 1000;
+  const eta = Math.ceil(dist * 3);
+  document.getElementById('etaText').innerHTML = `ETA: <strong>${eta} mins</strong> (${dist.toFixed(1)} km)`;
+}
+
+function connectSocket() {
+  socket = io(window.__SERVICONNECT_CONFIG__.API_BASE_URL);
+  socket.on('connect', () => {
+    socket.emit('join_booking', bookingId);
+  });
+  
+  socket.on('location_update', (data) => {
+    updateWorkerMarker(data.lat, data.lng);
+  });
+}
+</script>
+</body>
+</html>

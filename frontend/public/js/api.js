@@ -91,6 +91,7 @@ const CustomerAPI = {
   rateBooking:   (id, rating, comment) => API.patch(`/api/customer/bookings/${id}/rate`, { rating, comment }),
   getTracking:   (id) => API.get(`/api/customer/bookings/${id}/tracking`),
   updateLocation: (lat, lng) => API.patch('/api/customer/location', { lat, lng }),
+  updateProfile:  (payload) => API.patch('/api/customer/profile', payload),
 };
 
 // ── Worker API ────────────────────────────────────────────────
@@ -103,6 +104,13 @@ const WorkerAPI = {
   startJob:           (id) => API.patch(`/api/worker/jobs/${id}/start`),
   completeJob:        (id, payload) => API.patch(`/api/worker/jobs/${id}/complete`, payload),
   getVerificationStatus: () => API.get('/api/worker/verification-status'),
+  updateProfile:      (payload) => API.patch('/api/worker/profile', payload),
+};
+
+// ── Location API ──────────────────────────────────────────────
+const LocationAPI = {
+  updateLiveLocation: (payload) => API.post('/api/location/update', payload),
+  getLiveLocations:   (bookingId) => API.get(`/api/location/booking/${bookingId}`),
 };
 
 // ── Admin API ─────────────────────────────────────────────────
@@ -194,6 +202,7 @@ window.AuthAPI = AuthAPI;
 window.CustomerAPI = CustomerAPI;
 window.WorkerAPI = WorkerAPI;
 window.AdminAPI = AdminAPI;
+window.LocationAPI = LocationAPI;
 window.showToast = showToast;
 window.formatCurrency = formatCurrency;
 window.formatDate = formatDate;

@@ -117,15 +117,30 @@
     <div id="page-profile" style="display:none">
       <div class="page-header">
         <div><div class="page-title">My Profile</div></div>
+        <button class="btn btn-primary" onclick="toggleEditProfile()" id="editProfileBtn">Edit Profile</button>
       </div>
       <div class="card" style="max-width:520px">
         <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
-          <div style="width:64px;height:64px;border-radius:50%;background:var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:2rem;border:2px solid var(--teal)">👷</div>
-          <div>
-            <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800" id="profileName">—</div>
+          <div style="width:80px;height:80px;border-radius:50%;background:var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:2.5rem;border:2px solid var(--teal);overflow:hidden;position:relative" id="profileAvatarContainer">
+            <img src="" id="profileImg" style="width:100%;height:100%;object-fit:cover;display:none;">
+            <span id="profileEmoji">👷</span>
+            <div id="photoEditOverlay" style="display:none;position:absolute;bottom:0;width:100%;background:rgba(0,0,0,0.6);text-align:center;font-size:0.7rem;padding:4px 0;cursor:pointer" onclick="document.getElementById('profilePhotoInput').click()">Edit</div>
+            <input type="file" id="profilePhotoInput" accept="image/*" style="display:none" onchange="previewProfilePhoto(this)">
+          </div>
+          <div style="flex:1">
+            <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800" id="profileNameDisplay">—</div>
+            <div style="display:none;gap:10px" id="profileEditInputs">
+              <input type="text" id="editFirstName" class="form-input" style="padding:8px" placeholder="First Name">
+              <input type="text" id="editLastName" class="form-input" style="padding:8px" placeholder="Last Name">
+            </div>
             <div style="font-size:0.85rem;color:var(--text-dim)" id="profilePhone">—</div>
           </div>
         </div>
+        
+        <div id="profileSaveRow" style="display:none;margin-bottom:20px">
+          <button class="btn btn-teal" style="width:100%;justify-content:center" onclick="saveProfile()">Save Changes</button>
+        </div>
+
         <div class="form-group"><label class="form-label">Skills</label><div id="profileSkills" style="display:flex;gap:8px;flex-wrap:wrap;padding-top:4px"></div></div>
         <div class="form-group"><label class="form-label">City</label><div id="profileCity" style="padding:12px 0;color:var(--text-soft)">—</div></div>
         <div class="form-group"><label class="form-label">Experience</label><div id="profileExp" style="padding:12px 0;color:var(--text-soft)">—</div></div>
@@ -145,18 +160,30 @@
   <div class="modal" style="max-width:520px">
     <div class="modal-title">✅ Mark Job as Complete</div>
     <input type="hidden" id="completeJobId">
+    
     <div class="form-group">
-      <label class="form-label">📸 Upload Completion Photo(s) <span style="color:var(--orange)">*Required</span></label>
-      <div class="photo-upload-area" onclick="document.getElementById('completionPhotoInput').click()" style="padding:20px">
-        <span class="upload-icon" style="font-size:2rem">📷</span>
-        <div class="upload-text">Photos of completed work<br><strong>Max 3 photos</strong></div>
-        <input type="file" id="completionPhotoInput" accept="image/*" multiple style="display:none" onchange="handleCompletionPhotos(this)">
+      <label class="form-label">📸 Before Work Photos <span style="color:var(--orange)">*Required</span></label>
+      <div class="photo-upload-area" onclick="document.getElementById('beforePhotoInput').click()" style="padding:15px">
+        <span class="upload-icon" style="font-size:1.5rem">📷</span>
+        <div class="upload-text">Upload before starting<br><strong>Max 3 photos</strong></div>
+        <input type="file" id="beforePhotoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this, 'before')">
       </div>
-      <div class="photo-preview-grid" id="completionPhotoPreview"></div>
+      <div class="photo-preview-grid" id="beforePhotoPreview"></div>
     </div>
+
+    <div class="form-group">
+      <label class="form-label">📸 After Work Photos <span style="color:var(--orange)">*Required</span></label>
+      <div class="photo-upload-area" onclick="document.getElementById('afterPhotoInput').click()" style="padding:15px">
+        <span class="upload-icon" style="font-size:1.5rem">📷</span>
+        <div class="upload-text">Upload finished work<br><strong>Max 3 photos</strong></div>
+        <input type="file" id="afterPhotoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this, 'after')">
+      </div>
+      <div class="photo-preview-grid" id="afterPhotoPreview"></div>
+    </div>
+
     <div class="form-group">
       <label class="form-label">Completion Notes</label>
-      <textarea class="form-textarea" id="completionNotes" placeholder="Describe what was done…" style="min-height:70px"></textarea>
+      <textarea class="form-textarea" id="completionNotes" placeholder="Describe what was done…" style="min-height:50px"></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">Final Price (₹)</label>
@@ -438,28 +465,35 @@ async function acceptJob(id) {
   }
 }
 
-let completionPhotosBase64 = [];
-async function handleCompletionPhotos(input) {
+let beforePhotosBase64 = [];
+let afterPhotosBase64 = [];
+
+async function handlePhotos(input, type) {
   const files = Array.from(input.files).slice(0, 3);
-  completionPhotosBase64 = [];
-  const preview = document.getElementById('completionPhotoPreview');
+  let targetArr = type === 'before' ? beforePhotosBase64 : afterPhotosBase64;
+  targetArr.length = 0; // clear array
+  const preview = document.getElementById(`${type}PhotoPreview`);
   preview.innerHTML = '';
   for (const file of files) {
     const b64 = await fileToBase64(file);
-    completionPhotosBase64.push(b64);
-    preview.innerHTML += `<div class="photo-preview-item"><img src="${b64}"><button class="remove-photo" onclick="removeCompPhoto(${completionPhotosBase64.length-1})">×</button></div>`;
+    targetArr.push(b64);
+    preview.innerHTML += `<div class="photo-preview-item"><img src="${b64}"><button class="remove-photo" onclick="removePhoto('${type}', ${targetArr.length-1})">×</button></div>`;
   }
 }
-function removeCompPhoto(idx) {
-  completionPhotosBase64.splice(idx, 1);
-  const preview = document.getElementById('completionPhotoPreview');
-  preview.innerHTML = completionPhotosBase64.map((b,i) => `<div class="photo-preview-item"><img src="${b}"><button class="remove-photo" onclick="removeCompPhoto(${i})">×</button></div>`).join('');
+
+function removePhoto(type, idx) {
+  let targetArr = type === 'before' ? beforePhotosBase64 : afterPhotosBase64;
+  targetArr.splice(idx, 1);
+  const preview = document.getElementById(`${type}PhotoPreview`);
+  preview.innerHTML = targetArr.map((b,i) => `<div class="photo-preview-item"><img src="${b}"><button class="remove-photo" onclick="removePhoto('${type}', ${i})">×</button></div>`).join('');
 }
 
 function openComplete(id) {
   document.getElementById('completeJobId').value = id;
-  completionPhotosBase64 = [];
-  document.getElementById('completionPhotoPreview').innerHTML = '';
+  beforePhotosBase64 = [];
+  afterPhotosBase64 = [];
+  document.getElementById('beforePhotoPreview').innerHTML = '';
+  document.getElementById('afterPhotoPreview').innerHTML = '';
   document.getElementById('completionNotes').value = '';
   document.getElementById('completePrice').value = '';
   document.getElementById('completeModal').classList.add('open');
@@ -481,11 +515,17 @@ async function completeJob() {
   const id    = document.getElementById('completeJobId').value;
   const price = parseFloat(document.getElementById('completePrice').value) || 0;
   const notes = document.getElementById('completionNotes').value;
-  if (!completionPhotosBase64.length) {
-    showToast('📸 Please upload at least one completion photo.', 'error');
+  
+  if (!beforePhotosBase64.length) {
+    showToast('📸 Please upload at least one Before Work photo.', 'error');
     return;
   }
-  const payload = { price, completionPhotos: completionPhotosBase64, completionNotes: notes };
+  if (!afterPhotosBase64.length) {
+    showToast('📸 Please upload at least one After Work photo.', 'error');
+    return;
+  }
+  
+  const payload = { price, beforeWorkPhotos: beforePhotosBase64, afterWorkPhotos: afterPhotosBase64, completionNotes: notes };
   const { ok, data } = await WorkerAPI.completeJob(id, payload);
   if (ok) {
     showToast(`✅ Job marked complete! Earned ${formatCurrency(price)}`);
@@ -504,13 +544,19 @@ function renderHistory() {
     <table>
       <thead><tr><th>Service</th><th>Customer</th><th>Date</th><th>Price</th><th>Status</th><th>Rating</th></tr></thead>
       <tbody>
-        ${jobs.map(j => `<tr>
+        ${jobs.map(j => {
+          let reviewHtml = j.rating ? `⭐ ${j.rating}/5` : '—';
+          if (j.review && j.review.comment) {
+            reviewHtml += `<div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;font-style:italic">"${j.review.comment}"</div>`;
+          }
+          return `<tr>
           <td>${j.service}</td><td>${j.customerName}</td>
           <td>${formatDate(j.createdAt)}</td>
           <td>${j.price ? formatCurrency(j.price) : '—'}</td>
           <td>${statusBadge(j.status)}</td>
-          <td>${j.rating ? `⭐ ${j.rating}/5` : '—'}</td>
-        </tr>`).join('')}
+          <td>${reviewHtml}</td>
+        </tr>`;
+        }).join('')}
       </tbody>
     </table>`;
 }
@@ -539,7 +585,7 @@ function renderEarnings() {
 
 function renderProfile() {
   if (!workerData) return;
-  document.getElementById('profileName').textContent = `${workerData.firstName} ${workerData.lastName}`;
+  document.getElementById('profileNameDisplay').textContent = `${workerData.firstName} ${workerData.lastName}`;
   document.getElementById('profilePhone').textContent = workerData.phone;
   document.getElementById('profileCity').textContent  = workerData.city || '—';
   document.getElementById('profileExp').textContent   = workerData.experience || '—';
@@ -550,6 +596,74 @@ function renderProfile() {
   document.getElementById('profileVerified').innerHTML = workerData.isVerified
     ? '<span style="color:var(--teal)">✅ Verified Worker</span>'
     : '<span style="color:var(--gold)">⏳ Verification Pending (within 24h)</span>';
+  
+  if (workerData.profilePhotoUrl) {
+    document.getElementById('profileImg').src = workerData.profilePhotoUrl;
+    document.getElementById('profileImg').style.display = 'block';
+    document.getElementById('profileEmoji').style.display = 'none';
+  } else {
+    document.getElementById('profileImg').style.display = 'none';
+    document.getElementById('profileEmoji').style.display = 'block';
+  }
+}
+
+let isEditingProfile = false;
+let profilePhotoBase64 = null;
+
+function toggleEditProfile() {
+  isEditingProfile = !isEditingProfile;
+  const btn = document.getElementById('editProfileBtn');
+  btn.textContent = isEditingProfile ? 'Cancel Edit' : 'Edit Profile';
+  
+  document.getElementById('profileNameDisplay').style.display = isEditingProfile ? 'none' : 'block';
+  document.getElementById('profileEditInputs').style.display = isEditingProfile ? 'flex' : 'none';
+  document.getElementById('profileSaveRow').style.display = isEditingProfile ? 'block' : 'none';
+  document.getElementById('photoEditOverlay').style.display = isEditingProfile ? 'block' : 'none';
+  
+  if (isEditingProfile) {
+    document.getElementById('editFirstName').value = workerData.firstName || '';
+    document.getElementById('editLastName').value = workerData.lastName || '';
+    profilePhotoBase64 = null; // reset
+  } else {
+    renderProfile(); // reset photo preview if cancelled
+  }
+}
+
+async function previewProfilePhoto(input) {
+  if (input.files && input.files[0]) {
+    profilePhotoBase64 = await fileToBase64(input.files[0]);
+    document.getElementById('profileImg').src = profilePhotoBase64;
+    document.getElementById('profileImg').style.display = 'block';
+    document.getElementById('profileEmoji').style.display = 'none';
+  }
+}
+
+async function saveProfile() {
+  const firstName = document.getElementById('editFirstName').value.trim();
+  const lastName = document.getElementById('editLastName').value.trim();
+  
+  if (!firstName) return showToast('First name is required.', 'error');
+  
+  const payload = { firstName, lastName };
+  if (profilePhotoBase64) payload.profilePhoto = profilePhotoBase64;
+  
+  const { ok, data } = await WorkerAPI.updateProfile(payload);
+  if (ok) {
+    showToast('✅ Profile updated successfully!');
+    // Update local worker data
+    workerData.firstName = data.data.firstName;
+    workerData.lastName = data.data.lastName;
+    workerData.profilePhotoUrl = data.data.profilePhotoUrl;
+    toggleEditProfile(); // close edit mode
+    
+    // Also update sidebar
+    document.getElementById('sidebarName').textContent = `${workerData.firstName} ${workerData.lastName}`;
+    if (workerData.profilePhotoUrl) {
+      document.getElementById('sidebarAvatar').innerHTML = `<img src="${workerData.profilePhotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    }
+  } else {
+    showToast(data.message || 'Failed to update profile', 'error');
+  }
 }
 
 loadDashboard();

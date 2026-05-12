@@ -20,6 +20,7 @@ const customerRoutes = require('./routes/customer');
 const workerRoutes   = require('./routes/worker');
 const aiRoutes       = require('./routes/ai');
 const adminRoutes    = require('./routes/admin');
+const locationRoutes = require('./routes/locationRoutes');
 
 async function startServer() {
   // ── Load all config (env vars or AWS) ────────────────────────
@@ -67,6 +68,7 @@ async function startServer() {
   app.use('/api/worker',   workerRoutes);
   app.use('/api/ai',       aiRoutes);
   app.use('/api/admin',    adminRoutes);
+  app.use('/api/location', locationRoutes);
 
   // ── Health Check ──────────────────────────────────────────────
   app.get('/api/health', async (req, res) => {

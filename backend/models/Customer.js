@@ -12,6 +12,7 @@ module.exports = (sequelize) => {
     avatar:       { type: DataTypes.STRING(10),  defaultValue: '👤' },
     lat:          { type: DataTypes.FLOAT,       allowNull: true },
     lng:          { type: DataTypes.FLOAT,       allowNull: true },
+    profilePhotoUrl:{ type: DataTypes.STRING(500), allowNull: true },
     cognitoSub:   { type: DataTypes.STRING,      allowNull: true },
     isActive:     { type: DataTypes.BOOLEAN,     defaultValue: true },
   }, { tableName: 'customers', underscored: true });

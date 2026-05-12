@@ -26,8 +26,9 @@ module.exports = (sequelize) => {
 
     // ── Photo Workflow Fields ─────────────────────────────────
     issuePhotoUrls:      { type: DataTypes.JSON,  defaultValue: [] },      // Customer uploads before booking
-    completionPhotoUrls: { type: DataTypes.JSON,  defaultValue: [] },      // Worker uploads after job
-    completionNotes:     { type: DataTypes.TEXT,   allowNull: true },       // Worker notes on completion
+    beforeWorkPhotoUrls: { type: DataTypes.JSON,  defaultValue: [] },      // Worker uploads before starting/during job
+    afterWorkPhotoUrls:  { type: DataTypes.JSON,  defaultValue: [] },      // Worker uploads after job (replaces completionPhotoUrls)
+    completionNotes:     { type: DataTypes.TEXT,  allowNull: true },       // Worker notes on completion
   }, { tableName: 'bookings', underscored: true });
 
   Booking.associate = (models) => {

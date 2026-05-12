@@ -182,7 +182,9 @@ async function loadBookings() {
   if (!ok || !data.data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No bookings found.</div></div>'; return; }
   el.innerHTML = data.data.map(b => {
     const issuePhotos = (b.issuePhotoUrls||[]).map(u=>`<img src="${u}" onclick="openLightbox('${u}')">`).join('');
-    const compPhotos = (b.completionPhotoUrls||[]).map(u=>`<img src="${u}" onclick="openLightbox('${u}')">`).join('');
+    const beforePhotos = (b.beforeWorkPhotoUrls||[]).map(u=>`<img src="${u}" onclick="openLightbox('${u}')">`).join('');
+    const afterPhotos = (b.afterWorkPhotoUrls||[]).map(u=>`<img src="${u}" onclick="openLightbox('${u}')">`).join('');
+    
     return `<div class="card" style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
         <div>
@@ -193,10 +195,11 @@ async function loadBookings() {
           ${b.review ? `<div style="margin-top:6px;font-size:0.82rem">⭐ ${b.review.rating}/5 — "${b.review.comment||''}" <span class="verification-badge verification-${b.review.sentiment==='positive'?'verified':b.review.sentiment==='negative'?'rejected':'pending'}">${b.review.sentiment||'N/A'}</span></div>` : ''}
         </div>
       </div>
-      ${issuePhotos||compPhotos ? `<div style="display:flex;gap:20px;margin-top:12px;flex-wrap:wrap">
+      <div style="display:flex;gap:20px;margin-top:12px;flex-wrap:wrap">
         ${issuePhotos ? `<div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px">📸 Issue Photos</div><div class="photo-gallery">${issuePhotos}</div></div>` : ''}
-        ${compPhotos ? `<div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px">✅ Completion Photos</div><div class="photo-gallery">${compPhotos}</div></div>` : ''}
-      </div>` : ''}
+        ${beforePhotos ? `<div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px">📸 Before Work</div><div class="photo-gallery">${beforePhotos}</div></div>` : ''}
+        ${afterPhotos ? `<div><div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px">✅ After Work</div><div class="photo-gallery">${afterPhotos}</div></div>` : ''}
+      </div>
     </div>`;
   }).join('');
 }
