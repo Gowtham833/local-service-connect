@@ -510,14 +510,6 @@ npx jest tests/auth.test.js  # Single file
 
 ---
 
-## ⚠️ Security Notice
-
-- **Never commit** `.env`, `*.pem`, or AWS credentials (covered by `.gitignore`)
-- Production secrets managed via **AWS Secrets Manager**
-- Aadhaar documents stored in **private uploads/** directory
-- All API routes are rate-limited, validated, and JWT-protected
-- Docker runs as **non-root user** (`appuser`)
-
 ---
 
 ## 📄 License
