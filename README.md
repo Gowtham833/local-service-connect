@@ -504,9 +504,15 @@ npx jest tests/auth.test.js  # Single file
 
 ## 👥 Team
 
+
 | Role | Contributor |
-|------|------------|
-| Full Stack Developer | Gowtham Kota |
+|------|-------------|
+| AI Integration Engineer | K. Gowtham |
+| Frontend Developer | G. Bhavani Vara Prasad |
+| Backend & API Developer | J. Venkata Ramana |
+| Database Administrator & QA Engineer | K. Mohana Sivaram |
+| AWS Cloud Engineer | G. Rahul |
+| Full Stack Developer | Y. Tarun Kumar Reddy |
 
 ---
 
